@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, Wrench, Zap } from "lucide-react";
+import { CompileInstallDialog } from "./CompileInstallDialog";
 
 interface Software {
   id: string;
@@ -21,6 +22,10 @@ interface InstallDialogProps {
 }
 
 type InstallStatus = "idle" | "installing" | "success" | "error";
+type InstallMode = "quick" | "compile";
+
+// 支持编译安装的软件
+const COMPILE_SUPPORTED = ["nginx"];
 
 export function InstallDialog({
   open,
@@ -32,6 +37,10 @@ export function InstallDialog({
   const [status, setStatus] = useState<InstallStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [log, setLog] = useState<string[]>([]);
+  const [installMode, setInstallMode] = useState<InstallMode>("quick");
+  const [showCompileDialog, setShowCompileDialog] = useState(false);
+
+  const supportsCompile = software && COMPILE_SUPPORTED.includes(software.id);
 
   useEffect(() => {
     if (software) {
@@ -39,6 +48,7 @@ export function InstallDialog({
       setStatus("idle");
       setProgress(0);
       setLog([]);
+      setInstallMode("quick");
     }
   }, [software]);
 
@@ -99,39 +109,129 @@ export function InstallDialog({
         <div className="space-y-4">
           {status === "idle" && (
             <>
-              <div>
-                <label className="text-sm text-gray-600 block mb-2">
-                  选择版本
-                </label>
-                <Select value={selectedVersion} onValueChange={setSelectedVersion}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {versions.map((v) => (
-                      <SelectItem key={v} value={v}>
-                        {v}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* 安装方式选择 - 仅支持编译安装的软件显示 */}
+              {supportsCompile && (
+                <div>
+                  <label className="text-sm text-gray-600 block mb-2">
+                    安装方式
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label
+                      className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        installMode === "quick"
+                          ? "border-green-500 bg-green-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="installMode"
+                        value="quick"
+                        checked={installMode === "quick"}
+                        onChange={() => setInstallMode("quick")}
+                        className="mt-1"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2 font-medium">
+                          <Zap size={16} className="text-yellow-500" />
+                          快速安装
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          使用 apt 安装，速度快，标准配置
+                        </div>
+                      </div>
+                    </label>
+                    <label
+                      className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        installMode === "compile"
+                          ? "border-green-500 bg-green-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="installMode"
+                        value="compile"
+                        checked={installMode === "compile"}
+                        onChange={() => setInstallMode("compile")}
+                        className="mt-1"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2 font-medium">
+                          <Wrench size={16} className="text-blue-500" />
+                          编译安装
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          自定义模块，性能更优，需要5-15分钟
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
 
-              <div className="p-4 bg-yellow-50 rounded-lg text-sm text-yellow-800">
-                <strong>提示:</strong> 安装过程可能需要几分钟，请耐心等待。
-                安装期间请勿关闭此窗口。
-              </div>
+              {/* 快速安装 - 版本选择 */}
+              {installMode === "quick" && (
+                <div>
+                  <label className="text-sm text-gray-600 block mb-2">
+                    选择版本
+                  </label>
+                  <Select value={selectedVersion} onValueChange={setSelectedVersion}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {versions.map((v) => (
+                        <SelectItem key={v} value={v}>
+                          {v}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* 编译安装说明 */}
+              {installMode === "compile" && (
+                <div className="p-4 bg-blue-50 rounded-lg text-sm text-blue-800">
+                  <strong>编译安装</strong> 可以自定义选择模块：
+                  <ul className="mt-2 space-y-1 text-xs">
+                    <li>• Brotli 压缩 - 比 Gzip 更高效</li>
+                    <li>• 缓存清理 - 支持手动清除缓存</li>
+                    <li>• 流量统计 - VTS 监控模块</li>
+                    <li>• WAF 防护 - NAXSI/ModSecurity</li>
+                    <li>• 更多第三方模块...</li>
+                  </ul>
+                </div>
+              )}
+
+              {/* 快速安装提示 */}
+              {installMode === "quick" && (
+                <div className="p-4 bg-yellow-50 rounded-lg text-sm text-yellow-800">
+                  <strong>提示:</strong> 安装过程可能需要几分钟，请耐心等待。
+                  安装期间请勿关闭此窗口。
+                </div>
+              )}
 
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => onOpenChange(false)}>
                   取消
                 </Button>
-                <Button
-                  className="bg-green-600 hover:bg-green-700"
-                  onClick={handleInstall}
-                >
-                  开始安装
-                </Button>
+                {installMode === "quick" ? (
+                  <Button
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={handleInstall}
+                  >
+                    开始安装
+                  </Button>
+                ) : (
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setShowCompileDialog(true)}
+                  >
+                    配置编译选项
+                  </Button>
+                )}
               </div>
             </>
           )}
@@ -198,6 +298,20 @@ export function InstallDialog({
           )}
         </div>
       </DialogContent>
+
+      {/* 编译安装对话框 */}
+      {software && showCompileDialog && (
+        <CompileInstallDialog
+          open={showCompileDialog}
+          onClose={() => setShowCompileDialog(false)}
+          software={software.id}
+          onComplete={() => {
+            setShowCompileDialog(false);
+            onOpenChange(false);
+            onConfirm(software.id, "compiled");
+          }}
+        />
+      )}
     </Dialog>
   );
 }
