@@ -337,6 +337,14 @@ const PACKAGE_MAP: Record<string, Record<PackageManager, string[]>> = {
     pacman: ["zip", "unzip"],
     apk: ["zip", "unzip"],
   },
+  // Web 终端
+  ttyd: {
+    apt: ["ttyd"],
+    yum: ["ttyd"],
+    dnf: ["ttyd"],
+    pacman: ["ttyd"],
+    apk: ["ttyd"],
+  },
 };
 
 // 检测系统的包管理器
