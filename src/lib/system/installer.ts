@@ -433,6 +433,114 @@ async function addPhpPPA(): Promise<{ success: boolean; message: string }> {
   }
 }
 
+// 添加 OpenResty 官方源 (Ubuntu/Debian)
+async function addOpenRestyRepo(): Promise<{ success: boolean; message: string }> {
+  try {
+    // 检查是否已添加
+    const { stdout } = await execAsync("ls /etc/apt/sources.list.d/ 2>/dev/null || true");
+    if (stdout.includes("openresty")) {
+      return { success: true, message: "OpenResty repo already added" };
+    }
+
+    console.log("Adding OpenResty official repo...");
+
+    // 安装依赖
+    await execAsync("sudo apt-get install -y wget gnupg ca-certificates");
+
+    // 添加 GPG 密钥
+    await execAsync("wget -O - https://openresty.org/package/pubkey.gpg | sudo gpg --dearmor -o /usr/share/keyrings/openresty.gpg");
+
+    // 获取系统代号
+    const { stdout: codename } = await execAsync("lsb_release -sc");
+    const distro = codename.trim();
+
+    // 添加软件源
+    await execAsync(`echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/ubuntu ${distro} main" | sudo tee /etc/apt/sources.list.d/openresty.list`);
+
+    await execAsync("sudo apt-get update");
+    return { success: true, message: "OpenResty repo added successfully" };
+  } catch (error: any) {
+    console.log("Failed to add OpenResty repo:", error.message);
+    return { success: false, message: error.message };
+  }
+}
+
+// 添加 Docker 官方源 (Ubuntu/Debian)
+async function addDockerRepo(): Promise<{ success: boolean; message: string }> {
+  try {
+    const { stdout } = await execAsync("ls /etc/apt/sources.list.d/ 2>/dev/null || true");
+    if (stdout.includes("docker")) {
+      return { success: true, message: "Docker repo already added" };
+    }
+
+    console.log("Adding Docker official repo...");
+
+    await execAsync("sudo apt-get install -y ca-certificates curl");
+    await execAsync("sudo install -m 0755 -d /etc/apt/keyrings");
+    await execAsync("sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc");
+    await execAsync("sudo chmod a+r /etc/apt/keyrings/docker.asc");
+
+    const { stdout: codename } = await execAsync("lsb_release -sc");
+    const distro = codename.trim();
+
+    await execAsync(`echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${distro} stable" | sudo tee /etc/apt/sources.list.d/docker.list`);
+
+    await execAsync("sudo apt-get update");
+    return { success: true, message: "Docker repo added successfully" };
+  } catch (error: any) {
+    console.log("Failed to add Docker repo:", error.message);
+    return { success: false, message: error.message };
+  }
+}
+
+// 添加 MongoDB 官方源 (Ubuntu/Debian)
+async function addMongoDBRepo(): Promise<{ success: boolean; message: string }> {
+  try {
+    const { stdout } = await execAsync("ls /etc/apt/sources.list.d/ 2>/dev/null || true");
+    if (stdout.includes("mongodb")) {
+      return { success: true, message: "MongoDB repo already added" };
+    }
+
+    console.log("Adding MongoDB official repo...");
+
+    await execAsync("sudo apt-get install -y gnupg curl");
+    await execAsync("curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg");
+
+    const { stdout: codename } = await execAsync("lsb_release -sc");
+    const distro = codename.trim();
+
+    await execAsync(`echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg] https://repo.mongodb.org/apt/ubuntu ${distro}/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list`);
+
+    await execAsync("sudo apt-get update");
+    return { success: true, message: "MongoDB repo added successfully" };
+  } catch (error: any) {
+    console.log("Failed to add MongoDB repo:", error.message);
+    return { success: false, message: error.message };
+  }
+}
+
+// 添加 Elasticsearch 官方源 (Ubuntu/Debian)
+async function addElasticsearchRepo(): Promise<{ success: boolean; message: string }> {
+  try {
+    const { stdout } = await execAsync("ls /etc/apt/sources.list.d/ 2>/dev/null || true");
+    if (stdout.includes("elastic")) {
+      return { success: true, message: "Elasticsearch repo already added" };
+    }
+
+    console.log("Adding Elasticsearch official repo...");
+
+    await execAsync("wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg");
+    await execAsync("sudo apt-get install -y apt-transport-https");
+    await execAsync('echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list');
+
+    await execAsync("sudo apt-get update");
+    return { success: true, message: "Elasticsearch repo added successfully" };
+  } catch (error: any) {
+    console.log("Failed to add Elasticsearch repo:", error.message);
+    return { success: false, message: error.message };
+  }
+}
+
 // 安装软件
 export async function installSoftware(
   softwareId: string,
@@ -464,6 +572,33 @@ export async function installSoftware(
   if (softwareId.startsWith("php") && pm === "apt") {
     const ppaResult = await addPhpPPA();
     logs += `PPA: ${ppaResult.message}\n`;
+  }
+
+  // OpenResty 需要添加官方源 (Ubuntu/Debian)
+  if (softwareId === "openresty" && pm === "apt") {
+    const repoResult = await addOpenRestyRepo();
+    logs += `Repo: ${repoResult.message}\n`;
+    if (!repoResult.success) {
+      return { success: false, message: repoResult.message, logs };
+    }
+  }
+
+  // Docker 需要添加官方源 (Ubuntu/Debian)
+  if (softwareId === "docker" && pm === "apt") {
+    const repoResult = await addDockerRepo();
+    logs += `Repo: ${repoResult.message}\n`;
+  }
+
+  // MongoDB 需要添加官方源 (Ubuntu/Debian)
+  if (softwareId === "mongodb" && pm === "apt") {
+    const repoResult = await addMongoDBRepo();
+    logs += `Repo: ${repoResult.message}\n`;
+  }
+
+  // Elasticsearch 需要添加官方源 (Ubuntu/Debian)
+  if (softwareId === "elasticsearch" && pm === "apt") {
+    const repoResult = await addElasticsearchRepo();
+    logs += `Repo: ${repoResult.message}\n`;
   }
 
   // 构建安装命令
