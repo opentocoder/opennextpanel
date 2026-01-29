@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Search, Download, Trash2, RefreshCw } from "lucide-react";
+import { Search, Download, Trash2, RefreshCw, Loader2 } from "lucide-react";
 
 interface LogEntry {
   id: number;
@@ -42,6 +42,48 @@ export function LogViewer({
   const [search, setSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState("all");
   const [selectedSite, setSelectedSite] = useState("");
+  const [siteLogContent, setSiteLogContent] = useState("");
+  const [siteLogLoading, setSiteLogLoading] = useState(false);
+
+  // Fetch site log content when site is selected
+  const fetchSiteLog = async (siteName: string) => {
+    const site = siteLogs.find((s) => s.name === siteName);
+    if (!site) return;
+
+    setSiteLogLoading(true);
+    try {
+      const res = await fetch(`/api/logs?path=${encodeURIComponent(site.path)}&limit=200`);
+      const data = await res.json();
+      setSiteLogContent(data.content || "暂无日志内容");
+    } catch (error) {
+      setSiteLogContent("获取日志失败");
+    } finally {
+      setSiteLogLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedSite) {
+      fetchSiteLog(selectedSite);
+    }
+  }, [selectedSite]);
+
+  const handleSiteLogRefresh = () => {
+    if (selectedSite) {
+      fetchSiteLog(selectedSite);
+    }
+  };
+
+  const handleSiteLogDownload = () => {
+    if (!siteLogContent || !selectedSite) return;
+    const blob = new Blob([siteLogContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${selectedSite}_${new Date().toISOString().split("T")[0]}.log`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const filterLogs = (logs: LogEntry[]) => {
     return logs.filter((log) => {
@@ -201,39 +243,57 @@ export function LogViewer({
             <CardTitle>网站日志</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Select value={selectedSite} onValueChange={setSelectedSite}>
-                <SelectTrigger className="w-64">
-                  <SelectValue placeholder="选择网站" />
-                </SelectTrigger>
-                <SelectContent>
-                  {siteLogs.map((site) => (
-                    <SelectItem key={site.name} value={site.name}>
-                      {site.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Select value={selectedSite} onValueChange={setSelectedSite}>
+                  <SelectTrigger className="w-64">
+                    <SelectValue placeholder="选择网站" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {siteLogs.length > 0 ? (
+                      siteLogs.map((site) => (
+                        <SelectItem key={site.name} value={site.name}>
+                          {site.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="none" disabled>暂无网站</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {selectedSite && (
+                  <span className="text-sm text-gray-500">
+                    {siteLogs.find((s) => s.name === selectedSite)?.path || ""}
+                  </span>
+                )}
+              </div>
               {selectedSite && (
-                <span className="text-sm text-gray-500">
-                  日志路径: /www/wwwlogs/{selectedSite}.log
-                </span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={handleSiteLogRefresh}>
+                    <RefreshCw size={14} className="mr-1" />
+                    刷新
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleSiteLogDownload}>
+                    <Download size={14} className="mr-1" />
+                    下载
+                  </Button>
+                </div>
               )}
             </div>
 
             {selectedSite ? (
               <div className="border rounded-lg p-4 bg-gray-900 text-gray-100 font-mono text-sm max-h-[500px] overflow-auto">
-                <pre>
-                  {`192.168.1.100 - - [29/Jan/2026:10:30:00 +0800] "GET / HTTP/1.1" 200 1234
-192.168.1.100 - - [29/Jan/2026:10:30:01 +0800] "GET /style.css HTTP/1.1" 200 5678
-192.168.1.100 - - [29/Jan/2026:10:30:02 +0800] "GET /script.js HTTP/1.1" 200 9012
-203.45.67.89 - - [29/Jan/2026:10:31:00 +0800] "POST /api/login HTTP/1.1" 401 45
-203.45.67.89 - - [29/Jan/2026:10:31:05 +0800] "POST /api/login HTTP/1.1" 401 45`}
-                </pre>
+                {siteLogLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-green-500" />
+                  </div>
+                ) : (
+                  <pre className="whitespace-pre-wrap break-all">{siteLogContent}</pre>
+                )}
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                请选择要查看的网站
+                {siteLogs.length > 0 ? "请选择要查看的网站" : "暂无网站日志文件"}
               </div>
             )}
           </CardContent>

@@ -86,9 +86,11 @@ export function SecuritySettings({ settings, onSave }: SecuritySettingsProps) {
                       sshPort: parseInt(e.target.value),
                     })
                   }
+                  min={1}
+                  max={65535}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  建议使用非默认端口 (非22)
+                  建议使用非默认端口 (非22)，修改后防火墙会自动放行新端口
                 </p>
               </div>
 
@@ -133,6 +135,9 @@ export function SecuritySettings({ settings, onSave }: SecuritySettingsProps) {
                 <p className="font-medium">系统防火墙</p>
                 <p className="text-sm text-gray-500">
                   启用防火墙可有效阻止恶意攻击
+                </p>
+                <p className="text-xs text-green-600 mt-1">
+                  启用时会自动放行 SSH 和面板端口，确保不会被锁在外面
                 </p>
               </div>
               <Switch

@@ -27,6 +27,7 @@ interface Site {
   status: "running" | "stopped";
   backupCount: number;
   rootPath: string;
+  proxyUrl?: string | null;
   diskUsage: number;
   diskLimit: number;
   expireDate: string;
@@ -88,9 +89,16 @@ export function SiteList({ sites, onAddSite, onEditSite, onDeleteSite }: SiteLis
     },
     {
       key: "rootPath",
-      header: "根目录",
-      render: (value) => (
-        <span className="text-xs text-gray-600 font-mono">{value}</span>
+      header: "路径/代理",
+      render: (value, row) => (
+        row.phpVersion === "proxy" && row.proxyUrl ? (
+          <div>
+            <span className="text-xs text-purple-600 font-mono">→ {row.proxyUrl}</span>
+            <span className="text-xs text-gray-400 ml-1">(反代)</span>
+          </div>
+        ) : (
+          <span className="text-xs text-gray-600 font-mono">{value}</span>
+        )
       ),
     },
     {
@@ -151,21 +159,29 @@ export function SiteList({ sites, onAddSite, onEditSite, onDeleteSite }: SiteLis
       key: "actions",
       header: "操作",
       render: (_, row) => (
-        <div className="flex items-center gap-2">
-          <button className="text-blue-600 hover:text-blue-800 text-xs">
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <button type="button" className="text-blue-600 hover:text-blue-800 text-xs">
             防火墙
           </button>
           <span className="text-gray-300">|</span>
           <button
+            type="button"
             className="text-blue-600 hover:text-blue-800 text-xs"
-            onClick={() => onEditSite(row)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditSite(row);
+            }}
           >
             设置
           </button>
           <span className="text-gray-300">|</span>
           <button
+            type="button"
             className="text-red-600 hover:text-red-800 text-xs"
-            onClick={() => onDeleteSite(row)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteSite(row);
+            }}
           >
             删除
           </button>

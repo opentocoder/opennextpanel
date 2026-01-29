@@ -1,12 +1,7 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  console.warn("WARNING: JWT_SECRET environment variable is not set. Using random secret (sessions will not persist across restarts).");
-}
-
-const SECRET = JWT_SECRET || require("crypto").randomBytes(32).toString("hex");
+// 使用固定的默认密钥，确保重启后 session 不会失效
+const SECRET = process.env.JWT_SECRET || "openpanel-default-jwt-secret-key-2024";
 const JWT_EXPIRES = "24h";
 
 export interface JWTPayload {

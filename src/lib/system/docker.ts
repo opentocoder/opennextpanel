@@ -8,6 +8,9 @@ import Docker from "dockerode";
 // Initialize Docker client
 const docker = new Docker({ socketPath: "/var/run/docker.sock" });
 
+// OpenPanel shared network name
+const OPENPANEL_NETWORK = "openpanel-network";
+
 export interface ContainerInfo {
   id: string;
   name: string;
@@ -262,15 +265,49 @@ export async function removeImage(imageId: string, force = false): Promise<void>
 }
 
 /**
- * Create and run a container
+ * Ensure the OpenPanel shared network exists
+ */
+export async function ensureNetwork(): Promise<string> {
+  try {
+    // Check if network already exists
+    const networks = await docker.listNetworks({
+      filters: { name: [OPENPANEL_NETWORK] }
+    });
+
+    const existingNetwork = networks.find(n => n.Name === OPENPANEL_NETWORK);
+    if (existingNetwork) {
+      return existingNetwork.Id!;
+    }
+
+    // Create the network
+    const network = await docker.createNetwork({
+      Name: OPENPANEL_NETWORK,
+      Driver: "bridge",
+      CheckDuplicate: true,
+    });
+
+    console.log(`Created Docker network: ${OPENPANEL_NETWORK}`);
+    return network.id;
+  } catch (error) {
+    console.error("Failed to ensure network:", error);
+    throw new Error(`Failed to ensure network: ${error}`);
+  }
+}
+
+/**
+ * Create and run a container (automatically joins openpanel-network)
  */
 export async function createContainer(
   imageName: string,
   name: string,
   ports?: { [key: string]: string },
-  env?: string[]
+  env?: string[],
+  volumes?: { [hostPath: string]: string }  // hostPath -> containerPath
 ): Promise<string> {
   try {
+    // Ensure shared network exists
+    await ensureNetwork();
+
     // Build port bindings
     const exposedPorts: { [key: string]: {} } = {};
     const portBindings: { [key: string]: { HostPort: string }[] } = {};
@@ -283,6 +320,19 @@ export async function createContainer(
       }
     }
 
+    // Build volume bindings
+    const binds: string[] = [];
+    if (volumes) {
+      for (const [hostPath, containerPath] of Object.entries(volumes)) {
+        // 确保主机目录存在
+        const fs = require("fs");
+        if (!fs.existsSync(hostPath)) {
+          fs.mkdirSync(hostPath, { recursive: true });
+        }
+        binds.push(`${hostPath}:${containerPath}`);
+      }
+    }
+
     const container = await docker.createContainer({
       Image: imageName,
       name,
@@ -290,7 +340,9 @@ export async function createContainer(
       Env: env,
       HostConfig: {
         PortBindings: portBindings,
+        Binds: binds.length > 0 ? binds : undefined,
         RestartPolicy: { Name: "unless-stopped" },
+        NetworkMode: OPENPANEL_NETWORK,  // Auto-join shared network
       },
     });
 
@@ -327,4 +379,6 @@ export default {
   removeImage,
   createContainer,
   isDockerAvailable,
+  ensureNetwork,
+  OPENPANEL_NETWORK,
 };

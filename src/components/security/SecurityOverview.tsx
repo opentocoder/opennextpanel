@@ -22,6 +22,14 @@ interface SecurityStats {
   blockedIps: number;
 }
 
+interface RiskItem {
+  id: string;
+  title: string;
+  description: string;
+  severity: "low" | "medium" | "high";
+  suggestion: string;
+}
+
 interface LoginRecord {
   id: number;
   username: string;
@@ -33,10 +41,11 @@ interface LoginRecord {
 
 interface SecurityOverviewProps {
   stats: SecurityStats;
+  riskItems: RiskItem[];
   loginRecords: LoginRecord[];
 }
 
-export function SecurityOverview({ stats, loginRecords }: SecurityOverviewProps) {
+export function SecurityOverview({ stats, riskItems = [], loginRecords }: SecurityOverviewProps) {
   const getRiskColor = (level: string) => {
     switch (level) {
       case "low":
@@ -150,6 +159,63 @@ export function SecurityOverview({ stats, loginRecords }: SecurityOverviewProps)
           </CardContent>
         </Card>
       </div>
+
+      {/* Risk Items */}
+      {riskItems.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              安全风险详情
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {riskItems.map((risk) => (
+                <div
+                  key={risk.id}
+                  className={`p-4 rounded-lg border ${
+                    risk.severity === "high"
+                      ? "border-red-200 bg-red-50"
+                      : risk.severity === "medium"
+                      ? "border-yellow-200 bg-yellow-50"
+                      : "border-blue-200 bg-blue-50"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className={`font-medium ${
+                        risk.severity === "high"
+                          ? "text-red-800"
+                          : risk.severity === "medium"
+                          ? "text-yellow-800"
+                          : "text-blue-800"
+                      }`}>
+                        {risk.title}
+                      </h4>
+                      <p className="text-sm text-gray-600 mt-1">{risk.description}</p>
+                      <p className="text-sm text-green-600 mt-2">
+                        💡 {risk.suggestion}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        risk.severity === "high"
+                          ? "bg-red-200 text-red-800"
+                          : risk.severity === "medium"
+                          ? "bg-yellow-200 text-yellow-800"
+                          : "bg-blue-200 text-blue-800"
+                      }`}
+                    >
+                      {risk.severity === "high" ? "高" : risk.severity === "medium" ? "中" : "低"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Login Records */}
       <Card>

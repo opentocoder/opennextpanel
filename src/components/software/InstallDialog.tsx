@@ -42,41 +42,47 @@ export function InstallDialog({
     }
   }, [software]);
 
-  const handleInstall = () => {
-    setStatus("installing");
-    setLog(["开始安装 " + software?.name + " " + selectedVersion + "..."]);
+  const handleInstall = async () => {
+    if (!software) return;
 
-    // Simulate installation progress
-    let p = 0;
-    const interval = setInterval(() => {
-      p += Math.random() * 15;
-      if (p >= 100) {
-        p = 100;
-        clearInterval(interval);
+    setStatus("installing");
+    setProgress(10);
+    setLog(["开始安装 " + software.name + " " + selectedVersion + "..."]);
+
+    try {
+      // 调用真实的安装 API
+      const res = await fetch(`/api/software/${software.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "install", version: selectedVersion }),
+      });
+
+      setProgress(50);
+      setLog((prev) => [...prev, "正在等待安装完成..."]);
+
+      const data = await res.json();
+
+      if (data.success) {
+        setProgress(100);
         setStatus("success");
-        setLog((prev) => [...prev, "安装完成！"]);
-        onConfirm(software!.id, selectedVersion);
+        // 添加安装日志
+        if (data.logs && Array.isArray(data.logs)) {
+          setLog((prev) => [...prev, ...data.logs, "安装完成！"]);
+        } else {
+          setLog((prev) => [...prev, data.message || "安装完成！"]);
+        }
+        onConfirm(software.id, selectedVersion);
       } else {
-        setProgress(p);
-        // Add random log messages
-        const messages = [
-          "正在下载软件包...",
-          "正在解压文件...",
-          "正在配置环境...",
-          "正在安装依赖...",
-          "正在编译...",
-          "正在配置服务...",
-        ];
-        if (Math.random() > 0.5) {
-          setLog((prev) => [
-            ...prev,
-            messages[Math.floor(Math.random() * messages.length)],
-          ]);
+        setStatus("error");
+        setLog((prev) => [...prev, "安装失败: " + (data.error || data.message || "未知错误")]);
+        if (data.logs && Array.isArray(data.logs)) {
+          setLog((prev) => [...prev, ...data.logs]);
         }
       }
-    }, 500);
-
-    return () => clearInterval(interval);
+    } catch (error) {
+      setStatus("error");
+      setLog((prev) => [...prev, "安装失败: " + (error instanceof Error ? error.message : "网络错误")]);
+    }
   };
 
   if (!software) return null;

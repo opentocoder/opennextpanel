@@ -33,15 +33,16 @@ async function handleGET() {
       id: site.id,
       name: site.name,
       domain: site.domain,
-      status: site.status,
+      status: site.status === 1 ? "running" : "stopped",
       backupCount: site.backupCount || 0,
       rootPath: site.root_path,
+      proxyUrl: site.proxy_url || null,
       diskUsage: site.disk_usage || 0,
       diskLimit: site.disk_limit || 0,
       expireDate: site.expire_date || "永久",
       remark: site.remark || "",
       phpVersion: site.php_version || "static",
-      sslStatus: site.ssl_status || "not_deployed",
+      sslStatus: site.ssl_enabled === 1 ? "deployed" : "not_deployed",
       sslExpireDays: site.ssl_expire_days,
     }));
 
@@ -55,7 +56,7 @@ async function handleGET() {
 async function handlePOST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { domain, remark, rootPath, createFtp, createDb, phpVersion, proxyPort } = body;
+    const { domain, remark, rootPath, createFtp, createDb, phpVersion, proxyPort, siteType: requestedSiteType, proxyUrl, proxyWebsocket } = body;
 
     if (!domain) {
       return NextResponse.json({ error: "Domain is required" }, { status: 400 });
@@ -63,11 +64,19 @@ async function handlePOST(request: NextRequest) {
 
     const db = getDb();
     const name = domain.split("\n")[0].trim();
+
+    // 检查域名是否已存在
+    const existing = db.prepare("SELECT id FROM sites WHERE name = ? OR domain = ?").get(name, domain);
+    if (existing) {
+      return NextResponse.json({ error: "该域名已存在，请勿重复创建" }, { status: 400 });
+    }
     const siteRootPath = rootPath || `/var/www/${name}`;
 
     // 确定站点类型
     let siteType: SiteType = "static";
-    if (phpVersion && phpVersion !== "static") {
+    if (requestedSiteType === "proxy" || proxyUrl) {
+      siteType = "proxy";
+    } else if (phpVersion && phpVersion !== "static" && phpVersion !== "proxy") {
       siteType = "php";
     } else if (proxyPort) {
       siteType = "proxy";
@@ -96,8 +105,10 @@ async function handlePOST(request: NextRequest) {
       domain: name,
       type: siteType,
       rootPath: siteRootPath,
-      phpVersion: phpVersion !== "static" ? phpVersion : undefined,
+      phpVersion: phpVersion !== "static" && phpVersion !== "proxy" ? phpVersion : undefined,
       proxyPort: proxyPort,
+      proxyUrl: proxyUrl,
+      proxyWebsocket: proxyWebsocket,
     };
 
     let nginxConfigContent = "";
@@ -133,11 +144,11 @@ async function handlePOST(request: NextRequest) {
     const result = db
       .prepare(
         `
-      INSERT INTO sites (name, domain, root_path, php_version, remark, status, ssl_status)
-      VALUES (?, ?, ?, ?, ?, 'running', 'not_deployed')
+      INSERT INTO sites (name, domain, root_path, php_version, proxy_url, remark, status, ssl_enabled)
+      VALUES (?, ?, ?, ?, ?, ?, 1, 0)
     `
       )
-      .run(name, domain, siteRootPath, phpVersion || "static", remark || "");
+      .run(name, domain, siteRootPath, siteType === "proxy" ? "proxy" : (phpVersion || "static"), proxyUrl || null, remark || "");
 
     const siteId = result.lastInsertRowid;
 
@@ -163,10 +174,10 @@ async function handlePOST(request: NextRequest) {
         // 仍然保存到数据库（模拟模式）
         db.prepare(
           `
-          INSERT INTO ftps (site_id, username, path, status)
-          VALUES (?, ?, ?, 1)
+          INSERT INTO ftps (site_id, username, password, path, status)
+          VALUES (?, ?, ?, ?, 1)
         `
-        ).run(siteId, ftpUser, siteRootPath);
+        ).run(siteId, ftpUser, ftpPassword, siteRootPath);
       }
     }
 
@@ -195,10 +206,10 @@ async function handlePOST(request: NextRequest) {
         // 仍然保存到数据库（模拟模式）
         db.prepare(
           `
-          INSERT INTO databases (name, username, site_id, db_type, charset)
-          VALUES (?, ?, ?, 'mysql', 'utf8mb4')
+          INSERT INTO databases (name, username, password, site_id, db_type, charset)
+          VALUES (?, ?, ?, ?, 'mysql', 'utf8mb4')
         `
-        ).run(dbName, dbUser, siteId);
+        ).run(dbName, dbUser, dbPassword, siteId);
       }
     }
 

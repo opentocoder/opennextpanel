@@ -10,6 +10,12 @@ import {
   getServiceLogs,
 } from "@/lib/system/process";
 import { executeCommand } from "@/lib/system/executor";
+import {
+  installSoftware,
+  uninstallSoftware,
+  getAvailableVersions,
+  isSoftwareInstalled,
+} from "@/lib/system/installer";
 
 // 服务名映射
 const SERVICE_MAP: Record<string, string[]> = {
@@ -130,13 +136,42 @@ async function handleDELETE(request: NextRequest, context: { params: Promise<{ n
   }
 }
 
-// PUT: 重启服务或更新设置
+// PUT: 重启服务、安装、卸载等操作
 async function handlePUT(request: NextRequest, context: { params: Promise<{ name: string }> }) {
   try {
     const { name } = await context.params;
     const body = await request.json();
-    const { action } = body;
+    const { action, version } = body;
 
+    // 安装操作不需要服务已存在
+    if (action === "install") {
+      console.log(`Installing software: ${name}, version: ${version || "latest"}`);
+      const installResult = await installSoftware(name, { version });
+      return NextResponse.json({
+        success: installResult.success,
+        message: installResult.message,
+        logs: installResult.logs,
+      }, { status: installResult.success ? 200 : 500 });
+    }
+
+    // 卸载操作
+    if (action === "uninstall") {
+      console.log(`Uninstalling software: ${name}`);
+      const uninstallResult = await uninstallSoftware(name);
+      return NextResponse.json({
+        success: uninstallResult.success,
+        message: uninstallResult.message,
+        logs: uninstallResult.logs,
+      }, { status: uninstallResult.success ? 200 : 500 });
+    }
+
+    // 获取可用版本
+    if (action === "versions") {
+      const versions = await getAvailableVersions(name);
+      return NextResponse.json({ success: true, versions });
+    }
+
+    // 其他操作需要服务存在
     const actualName = await findActiveServiceName(name);
 
     if (!actualName) {

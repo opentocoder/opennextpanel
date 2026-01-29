@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -34,21 +34,20 @@ interface CronEditorProps {
   task?: CronTask | null;
 }
 
+const defaultFormData: CronTask = {
+  name: "",
+  type: "shell",
+  cronExpression: "0 0 * * *",
+  script: "",
+};
+
 export function CronEditor({
   open,
   onOpenChange,
   onSubmit,
   task,
 }: CronEditorProps) {
-  const [formData, setFormData] = useState<CronTask>(
-    task || {
-      name: "",
-      type: "shell",
-      cronExpression: "0 0 * * *",
-      script: "",
-    }
-  );
-
+  const [formData, setFormData] = useState<CronTask>(defaultFormData);
   const [cronMode, setCronMode] = useState<"simple" | "advanced">("simple");
   const [simpleConfig, setSimpleConfig] = useState({
     minute: "0",
@@ -57,6 +56,35 @@ export function CronEditor({
     month: "*",
     dayOfWeek: "*",
   });
+
+  // Reset form when dialog opens or task changes
+  useEffect(() => {
+    if (open) {
+      if (task) {
+        setFormData(task);
+        // Parse cron expression for simple mode
+        const parts = task.cronExpression.split(" ");
+        if (parts.length === 5) {
+          setSimpleConfig({
+            minute: parts[0],
+            hour: parts[1],
+            dayOfMonth: parts[2],
+            month: parts[3],
+            dayOfWeek: parts[4],
+          });
+        }
+      } else {
+        setFormData(defaultFormData);
+        setSimpleConfig({
+          minute: "0",
+          hour: "0",
+          dayOfMonth: "*",
+          month: "*",
+          dayOfWeek: "*",
+        });
+      }
+    }
+  }, [open, task]);
 
   const handleSimpleChange = (field: string, value: string) => {
     const newConfig = { ...simpleConfig, [field]: value };

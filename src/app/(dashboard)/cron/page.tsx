@@ -3,6 +3,15 @@
 import { useState, useEffect } from "react";
 import { CronList, CronEditor } from "@/components/cron";
 import { ConfirmDialog } from "@/components/common";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface CronTask {
   id: number;
@@ -21,7 +30,11 @@ export default function CronPage() {
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [logDialogOpen, setLogDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<CronTask | null>(null);
+  const [taskLogs, setTaskLogs] = useState<string>("");
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [running, setRunning] = useState(false);
 
   useEffect(() => {
     fetchTasks();
@@ -90,12 +103,41 @@ export default function CronPage() {
     }
   };
 
-  const handleRunNow = (task: CronTask) => {
-    alert(`立即执行任务: ${task.name}`);
+  const handleRunNow = async (task: CronTask) => {
+    setRunning(true);
+    setSelectedTask(task);
+    try {
+      const res = await fetch("/api/cron", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "run", id: task.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchTasks();
+      }
+    } catch (error) {
+      console.error("Failed to run task:", error);
+    } finally {
+      setRunning(false);
+      setSelectedTask(null);
+    }
   };
 
-  const handleViewLog = (task: CronTask) => {
-    alert(`查看日志: ${task.name}`);
+  const handleViewLog = async (task: CronTask) => {
+    setSelectedTask(task);
+    setLogDialogOpen(true);
+    setLogsLoading(true);
+    setTaskLogs("");
+    try {
+      const res = await fetch(`/api/cron?action=logs&id=${task.id}`);
+      const data = await res.json();
+      setTaskLogs(data.logs || "暂无日志");
+    } catch (error) {
+      setTaskLogs("获取日志失败");
+    } finally {
+      setLogsLoading(false);
+    }
   };
 
   if (loading) {
@@ -145,6 +187,47 @@ export default function CronPage() {
         confirmText="删除"
         variant="destructive"
       />
+
+      {/* Log Dialog */}
+      <Dialog open={logDialogOpen} onOpenChange={setLogDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>任务日志 - {selectedTask?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="h-[400px] bg-gray-900 rounded-lg p-4 overflow-auto">
+            {logsLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="w-6 h-6 animate-spin text-green-500" />
+              </div>
+            ) : (
+              <pre className="text-sm text-gray-100 font-mono whitespace-pre-wrap">
+                {taskLogs}
+              </pre>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLogDialogOpen(false)}>
+              关闭
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={() => selectedTask && handleViewLog(selectedTask)}
+            >
+              刷新
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Running indicator */}
+      {running && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 flex items-center gap-3">
+            <Loader2 className="w-6 h-6 animate-spin text-green-600" />
+            <span>正在执行任务: {selectedTask?.name}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

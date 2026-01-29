@@ -45,7 +45,7 @@ async function handleGET(request: NextRequest) {
 async function handlePOST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, containerId, imageId, imageName, containerName, ports, env } = body;
+    const { action, containerId, imageId, imageName, containerName, ports, env, volumes } = body;
 
     // Check if Docker is available
     const dockerAvailable = await dockerService.isDockerAvailable();
@@ -111,7 +111,8 @@ async function handlePOST(request: NextRequest) {
           imageName,
           containerName,
           ports,
-          env
+          env,
+          volumes
         );
         return NextResponse.json({
           success: true,

@@ -19,6 +19,7 @@ interface ConfirmDialogProps {
   confirmText?: string;
   cancelText?: string;
   variant?: "default" | "destructive";
+  loading?: boolean;
 }
 
 export function ConfirmDialog({
@@ -30,26 +31,26 @@ export function ConfirmDialog({
   confirmText = "确认",
   cancelText = "取消",
   variant = "default",
+  loading = false,
 }: ConfirmDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={loading ? undefined : onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             {cancelText}
           </Button>
           <Button
             variant={variant === "destructive" ? "destructive" : "default"}
-            onClick={() => {
-              onConfirm();
-              onOpenChange(false);
-            }}
+            className={variant === "destructive" ? "bg-red-600 hover:bg-red-700" : ""}
+            onClick={onConfirm}
+            disabled={loading}
           >
-            {confirmText}
+            {loading ? "处理中..." : confirmText}
           </Button>
         </DialogFooter>
       </DialogContent>

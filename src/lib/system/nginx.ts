@@ -14,6 +14,8 @@ export interface NginxSiteConfig {
   phpVersion?: string;
   proxyPort?: number;
   proxyHost?: string;
+  proxyUrl?: string;  // 完整代理URL，如 http://127.0.0.1:8081
+  proxyWebsocket?: boolean;  // 是否支持 WebSocket
   ssl?: boolean;
   sslCertPath?: string;
   sslKeyPath?: string;
@@ -182,7 +184,17 @@ server {
  * 生成反向代理配置
  */
 function generateProxyConfig(config: NginxSiteConfig): string {
-  const { domain, proxyPort = 3000, proxyHost = "127.0.0.1", ssl } = config;
+  const { domain, proxyPort = 3000, proxyHost = "127.0.0.1", proxyUrl, proxyWebsocket = true, ssl } = config;
+
+  // 确定代理目标地址
+  const backendUrl = proxyUrl || `http://${proxyHost}:${proxyPort}`;
+
+  // WebSocket 支持配置
+  const wsConfig = proxyWebsocket ? `
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";` : `
+        proxy_http_version 1.1;`;
 
   let serverBlock = `
 server {
@@ -191,16 +203,15 @@ server {
     server_name ${domain} www.${domain};
 
     location / {
-        proxy_pass http://${proxyHost}:${proxyPort};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
+        proxy_pass ${backendUrl};${wsConfig}
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 86400;
+        proxy_buffering off;
+        client_max_body_size 100m;
     }
 
     access_log /var/log/nginx/${domain}.access.log;
@@ -223,16 +234,15 @@ server {
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     location / {
-        proxy_pass http://${proxyHost}:${proxyPort};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
+        proxy_pass ${backendUrl};${wsConfig}
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
         proxy_read_timeout 86400;
+        proxy_buffering off;
+        client_max_body_size 100m;
     }
 
     access_log /var/log/nginx/${domain}.access.log;
@@ -287,8 +297,10 @@ export async function enableSite(domain: string): Promise<void> {
  * 禁用站点
  */
 export async function disableSite(domain: string): Promise<void> {
-  const enabledPath = path.join(NGINX_SITES_ENABLED, `${domain}.conf`);
-  await executeCommand("rm", ["-f", enabledPath]);
+  // 删除所有可能的符号链接格式（有.conf和无.conf）
+  const enabledPathConf = path.join(NGINX_SITES_ENABLED, `${domain}.conf`);
+  const enabledPathNoConf = path.join(NGINX_SITES_ENABLED, domain);
+  await executeCommand("rm", ["-f", enabledPathConf, enabledPathNoConf]);
 }
 
 /**
@@ -296,8 +308,10 @@ export async function disableSite(domain: string): Promise<void> {
  */
 export async function deleteSiteConfig(domain: string): Promise<void> {
   await disableSite(domain);
-  const availablePath = path.join(NGINX_SITES_AVAILABLE, `${domain}.conf`);
-  await executeCommand("rm", ["-f", availablePath]);
+  // 删除所有可能的配置文件格式（有.conf和无.conf）
+  const availablePathConf = path.join(NGINX_SITES_AVAILABLE, `${domain}.conf`);
+  const availablePathNoConf = path.join(NGINX_SITES_AVAILABLE, domain);
+  await executeCommand("rm", ["-f", availablePathConf, availablePathNoConf]);
 }
 
 /**

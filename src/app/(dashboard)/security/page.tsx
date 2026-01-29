@@ -24,6 +24,14 @@ interface SecurityStats {
   blockedIps: number;
 }
 
+interface RiskItem {
+  id: string;
+  title: string;
+  description: string;
+  severity: "low" | "medium" | "high";
+  suggestion: string;
+}
+
 interface SecuritySettingsData {
   sshPort: number;
   panelPort: number;
@@ -45,6 +53,7 @@ export default function SecurityPage() {
     failedLogins: 0,
     blockedIps: 0,
   });
+  const [riskItems, setRiskItems] = useState<RiskItem[]>([]);
   const [loginRecords, setLoginRecords] = useState<LoginRecord[]>([]);
   const [settings, setSettings] = useState<SecuritySettingsData>({
     sshPort: 22,
@@ -69,6 +78,9 @@ export default function SecurityPage() {
 
       if (statsData.stats) {
         setStats(statsData.stats);
+      }
+      if (statsData.riskItems) {
+        setRiskItems(statsData.riskItems);
       }
       if (recordsData.records) {
         setLoginRecords(recordsData.records);
@@ -96,12 +108,21 @@ export default function SecurityPage() {
       });
 
       const data = await response.json();
-      if (data.success) {
-        setSettings(newSettings);
+
+      // Show detailed results for each setting
+      if (data.results && data.results.length > 0) {
+        const messages = data.results.map((r: { field: string; success: boolean; message: string }) =>
+          `${r.field}: ${r.success ? "✓" : "✗"} ${r.message}`
+        ).join("\n");
+        alert(messages);
+      } else if (data.success) {
         alert("设置已保存");
       } else {
-        alert("保存失败: " + data.error);
+        alert("保存失败: " + (data.error || data.message || "未知错误"));
       }
+
+      // Refresh data to get updated state
+      fetchData();
     } catch (error) {
       console.error("Failed to save settings:", error);
       alert("保存失败");
@@ -127,7 +148,7 @@ export default function SecurityPage() {
         </TabsList>
 
         <TabsContent value="overview">
-          <SecurityOverview stats={stats} loginRecords={loginRecords} />
+          <SecurityOverview stats={stats} riskItems={riskItems} loginRecords={loginRecords} />
         </TabsContent>
 
         <TabsContent value="settings">

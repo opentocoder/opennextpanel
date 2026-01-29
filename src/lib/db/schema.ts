@@ -41,6 +41,7 @@ export function initDatabase() {
       port INTEGER DEFAULT 80,
       root_path TEXT NOT NULL,
       php_version TEXT DEFAULT 'static',
+      proxy_url TEXT,
       status INTEGER DEFAULT 1,
       ssl_enabled INTEGER DEFAULT 0,
       ssl_expire_date DATETIME,
@@ -55,6 +56,13 @@ export function initDatabase() {
     )
   `);
 
+  // 迁移：添加 proxy_url 列（如果不存在）
+  try {
+    db.exec(`ALTER TABLE sites ADD COLUMN proxy_url TEXT`);
+  } catch (e) {
+    // 列已存在，忽略
+  }
+
   // 数据库表
   db.exec(`
     CREATE TABLE IF NOT EXISTS databases (
@@ -67,10 +75,12 @@ export function initDatabase() {
       port INTEGER DEFAULT 3306,
       charset TEXT DEFAULT 'utf8mb4',
       access_permission TEXT DEFAULT 'localhost',
+      site_id INTEGER,
       backup_count INTEGER DEFAULT 0,
       size INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (site_id) REFERENCES sites(id)
     )
   `);
 
@@ -78,12 +88,14 @@ export function initDatabase() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS ftps (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      site_id INTEGER,
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       path TEXT NOT NULL,
       status INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (site_id) REFERENCES sites(id)
     )
   `);
 
@@ -101,6 +113,18 @@ export function initDatabase() {
       run_count INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // 计划任务执行日志表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS cron_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cron_id INTEGER NOT NULL,
+      status INTEGER DEFAULT 0,
+      output TEXT,
+      executed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (cron_id) REFERENCES crons(id) ON DELETE CASCADE
     )
   `);
 
@@ -199,11 +223,10 @@ export function initDatabase() {
     ON monitor_history(created_at)
   `);
 
-  // 插入默认管理员 (生成随机密码)
+  // 插入默认管理员 (使用固定密码 admin123)
   const bcrypt = require("bcryptjs");
-  const crypto = require("crypto");
-  const randomPassword = crypto.randomBytes(8).toString("hex"); // 16位随机密码
-  const hashedPassword = bcrypt.hashSync(randomPassword, 10);
+  const defaultPassword = "admin123";
+  const hashedPassword = bcrypt.hashSync(defaultPassword, 10);
 
   const stmt = db.prepare(`
     INSERT OR IGNORE INTO users (username, password, role)
@@ -215,7 +238,7 @@ export function initDatabase() {
     console.log("\n========================================");
     console.log("  默认管理员账户已创建");
     console.log("  用户名: admin");
-    console.log("  密码: " + randomPassword);
+    console.log("  密码: admin123");
     console.log("  请立即登录并修改密码！");
     console.log("========================================\n");
   }

@@ -11,6 +11,16 @@ import {
 } from "@/components/files";
 import { ConfirmDialog } from "@/components/common";
 import { ChevronRight, Home } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 
 interface FileItem {
   name: string;
@@ -31,7 +41,7 @@ interface TreeNode {
 }
 
 export default function FilesPage() {
-  const [currentPath, setCurrentPath] = useState("/www/wwwroot");
+  const [currentPath, setCurrentPath] = useState("/");
   const [files, setFiles] = useState<FileItem[]>([]);
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +58,9 @@ export default function FilesPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFileOpen, setNewFileOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [newFileName, setNewFileName] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchFiles(currentPath);
@@ -204,6 +217,75 @@ export default function FilesPage() {
     window.open(`/api/files/download?path=${encodeURIComponent(file.path)}`, "_blank");
   };
 
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    try {
+      await fetch("/api/files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "mkdir",
+          path: currentPath + "/" + newFolderName.trim(),
+        }),
+      });
+      setNewFolderOpen(false);
+      setNewFolderName("");
+      fetchFiles(currentPath);
+      fetchTree();
+    } catch (error) {
+      console.error("Failed to create folder:", error);
+    }
+  };
+
+  const handleCreateFile = async () => {
+    if (!newFileName.trim()) return;
+    try {
+      await fetch("/api/files/content", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: currentPath + "/" + newFileName.trim(),
+          content: "",
+        }),
+      });
+      setNewFileOpen(false);
+      setNewFileName("");
+      fetchFiles(currentPath);
+    } catch (error) {
+      console.error("Failed to create file:", error);
+    }
+  };
+
+  const handleUpload = async (fileList: FileList) => {
+    setUploading(true);
+    try {
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("path", currentPath);
+
+        await fetch("/api/files/upload", {
+          method: "POST",
+          body: formData,
+        });
+      }
+      fetchFiles(currentPath);
+    } catch (error) {
+      console.error("Failed to upload:", error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleToolbarEdit = () => {
+    if (selectedFiles.length === 1 && !selectedFiles[0].isDir) {
+      handleEdit(selectedFiles[0]);
+    }
+  };
+
+  const canEdit = selectedFiles.length === 1 && !selectedFiles[0]?.isDir;
+
   const breadcrumbs = currentPath.split("/").filter(Boolean);
 
   return (
@@ -238,8 +320,9 @@ export default function FilesPage() {
         currentPath={currentPath}
         onNewFolder={() => setNewFolderOpen(true)}
         onNewFile={() => setNewFileOpen(true)}
-        onUpload={() => {}}
+        onUpload={handleUpload}
         onDownload={() => selectedFiles.length === 1 && handleDownload(selectedFiles[0])}
+        onEdit={handleToolbarEdit}
         onDelete={() => setDeleteOpen(true)}
         onCopy={() => handleCopy(selectedFiles)}
         onCut={() => handleCut(selectedFiles)}
@@ -249,10 +332,12 @@ export default function FilesPage() {
           setCompressOpen(true);
         }}
         onRefresh={() => fetchFiles(currentPath)}
-        onTerminal={() => {}}
+        onTerminal={() => window.open("/terminal", "_blank")}
         onSearch={() => {}}
+        onNavigate={handleNavigate}
         hasSelection={selectedFiles.length > 0}
         hasClipboard={clipboard !== null}
+        canEdit={canEdit}
       />
 
       {/* Main content */}
@@ -326,6 +411,84 @@ export default function FilesPage() {
         confirmText="删除"
         variant="destructive"
       />
+
+      {/* New Folder Dialog */}
+      <Dialog open={newFolderOpen} onOpenChange={setNewFolderOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新建目录</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-gray-600 block mb-2">目录名称</label>
+              <Input
+                placeholder="输入目录名称"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              将在 {currentPath} 下创建
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewFolderOpen(false)}>
+              取消
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleCreateFolder}
+            >
+              创建
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New File Dialog */}
+      <Dialog open={newFileOpen} onOpenChange={setNewFileOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新建文件</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-gray-600 block mb-2">文件名称</label>
+              <Input
+                placeholder="输入文件名称，如 index.html"
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateFile()}
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              将在 {currentPath} 下创建
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewFileOpen(false)}>
+              取消
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleCreateFile}
+            >
+              创建
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload indicator */}
+      {uploading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 flex items-center gap-3">
+            <Loader2 className="w-6 h-6 animate-spin text-green-600" />
+            <span>正在上传文件...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

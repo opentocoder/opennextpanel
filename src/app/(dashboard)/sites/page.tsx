@@ -11,6 +11,7 @@ interface Site {
   status: "running" | "stopped";
   backupCount: number;
   rootPath: string;
+  proxyUrl?: string | null;
   diskUsage: number;
   diskLimit: number;
   expireDate: string;
@@ -27,6 +28,7 @@ export default function SitesPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchSites();
@@ -44,19 +46,9 @@ export default function SitesPage() {
     }
   };
 
-  const handleAddSite = async (data: any) => {
-    try {
-      const res = await fetch("/api/sites", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        fetchSites();
-      }
-    } catch (error) {
-      console.error("Failed to add site:", error);
-    }
+  const handleAddSite = async () => {
+    // AddSiteDialog 已经处理了 API 调用，这里只需要刷新列表
+    fetchSites();
   };
 
   const handleEditSite = (site: Site) => {
@@ -71,18 +63,24 @@ export default function SitesPage() {
 
   const confirmDelete = async () => {
     if (!selectedSite) return;
+    setDeleting(true);
     try {
       const res = await fetch(`/api/sites/${selectedSite.id}`, {
         method: "DELETE",
       });
+      const data = await res.json();
       if (res.ok) {
         fetchSites();
+        setDeleteDialogOpen(false);
+        setSelectedSite(null);
+      } else {
+        alert(`删除失败: ${data.error || '未知错误'}`);
       }
     } catch (error) {
       console.error("Failed to delete site:", error);
+      alert("删除失败: 网络错误");
     } finally {
-      setDeleteDialogOpen(false);
-      setSelectedSite(null);
+      setDeleting(false);
     }
   };
 
@@ -123,6 +121,7 @@ export default function SitesPage() {
         onConfirm={confirmDelete}
         confirmText="删除"
         variant="destructive"
+        loading={deleting}
       />
     </div>
   );

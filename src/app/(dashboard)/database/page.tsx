@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DatabaseList, AddDatabaseDialog } from "@/components/database";
 import { ConfirmDialog } from "@/components/common";
 import {
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Loader2, Upload, Download, Database } from "lucide-react";
 
 interface DatabaseItem {
   id: number;
@@ -45,6 +46,13 @@ export default function DatabasePage() {
   const [selectedDb, setSelectedDb] = useState<DatabaseItem | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [newPermission, setNewPermission] = useState("localhost");
+  const [backupDialogOpen, setBackupDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [backuping, setBackuping] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [backups, setBackups] = useState<any[]>([]);
+  const [selectedBackupId, setSelectedBackupId] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchDatabases();
@@ -134,13 +142,84 @@ export default function DatabasePage() {
   };
 
   const handleBackup = async (db: DatabaseItem) => {
-    // TODO: Implement backup functionality
-    alert(`备份数据库: ${db.name}`);
+    setSelectedDb(db);
+    setBackupDialogOpen(true);
   };
 
   const handleImport = async (db: DatabaseItem) => {
-    // TODO: Implement import functionality
-    alert(`导入数据库: ${db.name}`);
+    setSelectedDb(db);
+    // 获取该数据库的备份列表
+    try {
+      const res = await fetch(`/api/database/backup?dbId=${db.id}`);
+      const data = await res.json();
+      setBackups(data.backups || []);
+    } catch (e) {
+      setBackups([]);
+    }
+    setSelectedBackupId("");
+    setImportDialogOpen(true);
+  };
+
+  const handleConfirmBackup = async () => {
+    if (!selectedDb) return;
+    setBackuping(true);
+    try {
+      const res = await fetch("/api/database/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dbId: selectedDb.id,
+          dbName: selectedDb.name,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(`备份成功！文件大小: ${formatSize(data.size)}`);
+        fetchDatabases();
+      } else {
+        alert(`备份失败: ${data.error}`);
+      }
+    } catch (error: any) {
+      alert(`备份失败: ${error.message}`);
+    } finally {
+      setBackuping(false);
+      setBackupDialogOpen(false);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!selectedDb || !selectedBackupId) return;
+    setImporting(true);
+    try {
+      const res = await fetch("/api/database/backup", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dbName: selectedDb.name,
+          backupId: selectedBackupId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert("数据库恢复成功！");
+        fetchDatabases();
+      } else {
+        alert(`恢复失败: ${data.error}`);
+      }
+    } catch (error: any) {
+      alert(`恢复失败: ${error.message}`);
+    } finally {
+      setImporting(false);
+      setImportDialogOpen(false);
+    }
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   if (loading) {
@@ -263,6 +342,117 @@ export default function DatabasePage() {
               onClick={handleChangePermission}
             >
               确认
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Backup Dialog */}
+      <Dialog open={backupDialogOpen} onOpenChange={setBackupDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              备份数据库
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded">
+              <p className="text-sm">
+                数据库: <span className="font-semibold">{selectedDb?.name}</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                备份文件将保存到 /www/backup/database/ 目录
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBackupDialogOpen(false)}
+              disabled={backuping}
+            >
+              取消
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleConfirmBackup}
+              disabled={backuping}
+            >
+              {backuping ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  备份中...
+                </>
+              ) : (
+                "开始备份"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import/Restore Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              导入/恢复数据库
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded">
+              <p className="text-sm">
+                目标数据库: <span className="font-semibold">{selectedDb?.name}</span>
+              </p>
+              <p className="text-xs text-red-500 mt-2">
+                ⚠️ 导入会覆盖现有数据，请谨慎操作
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-2">选择备份文件</label>
+              {backups.length > 0 ? (
+                <Select value={selectedBackupId} onValueChange={setSelectedBackupId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择一个备份..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {backups.map((backup: any) => (
+                      <SelectItem key={backup.id} value={String(backup.id)}>
+                        {backup.name} ({formatSize(backup.file_size)})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm text-gray-500 p-3 bg-gray-100 rounded">
+                  暂无备份文件，请先创建备份
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setImportDialogOpen(false)}
+              disabled={importing}
+            >
+              取消
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={handleConfirmImport}
+              disabled={importing || !selectedBackupId}
+            >
+              {importing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  导入中...
+                </>
+              ) : (
+                "开始导入"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

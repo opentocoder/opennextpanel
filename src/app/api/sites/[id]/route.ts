@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { withAuth } from "@/lib/auth/middleware";
+import { deleteSiteConfig, reloadNginx } from "@/lib/system/nginx";
 
 async function handleGET(
   request: NextRequest,
@@ -97,16 +98,30 @@ async function handleDELETE(
     const { id } = await context.params;
     const db = getDb();
 
-    // Delete associated FTP accounts
-    db.prepare("DELETE FROM ftps WHERE site_id = ?").run(id);
+    // 先获取站点信息（需要域名来删除 Nginx 配置）
+    const site = db.prepare("SELECT name, domain FROM sites WHERE id = ?").get(id) as { name: string; domain: string } | undefined;
 
-    // Delete associated databases
-    db.prepare("DELETE FROM databases WHERE site_id = ?").run(id);
+    if (!site) {
+      return NextResponse.json({ error: "Site not found" }, { status: 404 });
+    }
+
+    // 删除 Nginx 配置文件
+    try {
+      await deleteSiteConfig(site.name);
+      await reloadNginx();
+    } catch (e) {
+      console.log("Nginx config deletion skipped:", e);
+      // 继续删除数据库记录，即使 Nginx 配置删除失败
+    }
 
     // Delete associated backups
-    db.prepare("DELETE FROM backups WHERE site_id = ?").run(id);
+    try {
+      db.prepare("DELETE FROM backups WHERE target_id = ? AND type = 'site'").run(id);
+    } catch (e) {
+      // Ignore if table structure is different
+    }
 
-    // Delete the site
+    // Delete the site from database
     const result = db.prepare("DELETE FROM sites WHERE id = ?").run(id);
 
     if (result.changes === 0) {
@@ -114,9 +129,9 @@ async function handleDELETE(
     }
 
     return NextResponse.json({ success: true, message: "Site deleted successfully" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to delete site:", error);
-    return NextResponse.json({ error: "Failed to delete site" }, { status: 500 });
+    return NextResponse.json({ error: `Failed to delete site: ${error.message}` }, { status: 500 });
   }
 }
 

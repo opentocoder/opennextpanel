@@ -18,8 +18,9 @@ NC='\033[0m' # No Color
 INSTALL_DIR="/opt/openpanel"
 SERVICE_NAME="openpanel"
 DEFAULT_PORT=8888
-REPO_URL="https://github.com/yourusername/openpanel.git"
-MIN_NODE_VERSION=18
+REPO_URL="${OPENPANEL_REPO_URL:-https://github.com/yourusername/openpanel.git}"
+DOWNLOAD_URL="${OPENPANEL_DOWNLOAD_URL:-}"  # 支持从 tar.gz 下载
+MIN_NODE_VERSION=20
 
 # 打印带颜色的消息
 print_info() {
@@ -108,7 +109,8 @@ check_requirements() {
     print_step "检查系统要求"
 
     # 检查内存
-    local mem_total=$(free -m | awk '/^Mem:/{print $2}')
+    local mem_total=$(free -m | awk '/^Mem:/{print $2}' || echo "0")
+    mem_total=${mem_total:-0}
     if [ "$mem_total" -lt 512 ]; then
         print_warning "内存不足 512MB，可能影响性能"
     else
@@ -116,7 +118,8 @@ check_requirements() {
     fi
 
     # 检查磁盘空间
-    local disk_free=$(df -m "$INSTALL_DIR" 2>/dev/null | awk 'NR==2{print $4}' || df -m / | awk 'NR==2{print $4}')
+    local disk_free=$(df -m "$INSTALL_DIR" 2>/dev/null | awk 'NR==2{print $4}' || df -m / | awk 'NR==2{print $4}' || echo "0")
+    disk_free=${disk_free:-0}
     if [ "$disk_free" -lt 1024 ]; then
         print_warning "磁盘空间不足 1GB"
     else
@@ -225,16 +228,25 @@ download_panel() {
         rm -rf "$INSTALL_DIR"
     fi
 
-    print_info "克隆仓库到 $INSTALL_DIR..."
+    print_info "下载源码到 $INSTALL_DIR..."
 
-    # 如果有本地源码，复制；否则从 git 克隆
-    if [ -d "/tmp/openpanel-source" ]; then
-        cp -r /tmp/openpanel-source "$INSTALL_DIR"
+    mkdir -p "$INSTALL_DIR"
+
+    # 优先级: 1.环境变量指定的下载URL 2.本地源码 3.Git克隆
+    if [ -n "$DOWNLOAD_URL" ]; then
+        print_info "从 $DOWNLOAD_URL 下载..."
+        curl -sSL "$DOWNLOAD_URL" -o /tmp/openpanel.tar.gz && \
+        tar -xzf /tmp/openpanel.tar.gz -C "$INSTALL_DIR" && \
+        rm -f /tmp/openpanel.tar.gz
+    elif [ -d "/tmp/openpanel-source" ]; then
+        print_info "使用本地源码..."
+        cp -r /tmp/openpanel-source/* "$INSTALL_DIR/"
     else
+        print_info "从 Git 克隆..."
         git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" 2>/dev/null || {
-            print_warning "无法从 Git 克隆，创建基础目录..."
-            mkdir -p "$INSTALL_DIR"
-            # 这里可以从其他源下载或提示手动安装
+            print_error "无法下载源码，请设置 OPENPANEL_DOWNLOAD_URL 环境变量"
+            print_info "示例: OPENPANEL_DOWNLOAD_URL=http://your-server/openpanel.tar.gz bash install_panel.sh"
+            exit 1
         }
     fi
 
@@ -253,7 +265,7 @@ install_panel_deps() {
     fi
 
     print_info "运行 npm install..."
-    npm install --production=false 2>&1 | tail -5
+    npm install --legacy-peer-deps 2>&1 | tail -10
 
     print_success "依赖安装完成"
 }
@@ -317,6 +329,16 @@ EOF
     ADMIN_PASSWORD="$admin_password"
 
     print_success "配置文件已创建"
+
+    # 初始化数据库
+    print_info "初始化数据库..."
+    cd "$INSTALL_DIR"
+    if [ -f "scripts/init-db.js" ]; then
+        node scripts/init-db.js --password "$admin_password" 2>&1 | tail -10
+        print_success "数据库初始化完成"
+    else
+        print_warning "未找到数据库初始化脚本，跳过"
+    fi
 }
 
 # 创建 systemd 服务

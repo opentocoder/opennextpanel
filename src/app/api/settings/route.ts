@@ -165,14 +165,16 @@ async function handlePOST(request: NextRequest) {
     const { action, settings, currentPassword, newPassword } = body;
 
     if (action === "save_basic") {
-      if (settings.panelName) saveSetting("panel_name", settings.panelName);
-      if (settings.panelPort) saveSetting("panel_port", String(settings.panelPort));
-      if (settings.securityPath) saveSetting("security_path", settings.securityPath);
-      if (settings.sessionTimeout) saveSetting("session_timeout", String(settings.sessionTimeout));
-      saveSetting("auto_backup", settings.autoBackup ? "1" : "0");
-      if (settings.backupRetention) saveSetting("backup_retention", String(settings.backupRetention));
+      // 保存所有设置，包括空值
+      if (settings.panelName !== undefined) saveSetting("panel_name", settings.panelName || "OpenPanel");
+      if (settings.panelPort !== undefined) saveSetting("panel_port", String(settings.panelPort || 8888));
+      // 安全入口允许为空（关闭功能）
+      if (settings.securityPath !== undefined) saveSetting("security_path", settings.securityPath);
+      if (settings.sessionTimeout !== undefined) saveSetting("session_timeout", String(settings.sessionTimeout || 120));
+      if (settings.autoBackup !== undefined) saveSetting("auto_backup", settings.autoBackup ? "1" : "0");
+      if (settings.backupRetention !== undefined) saveSetting("backup_retention", String(settings.backupRetention || 7));
 
-      return NextResponse.json({ success: true, message: "Basic settings saved" });
+      return NextResponse.json({ success: true, message: "设置已保存" });
     }
 
     if (action === "save_api") {

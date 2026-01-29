@@ -161,22 +161,66 @@ function getSecuritySettings() {
   }
 }
 
-// Calculate risk level
-function calculateRiskLevel(stats: Partial<SecurityStats>): { level: "low" | "medium" | "high"; risks: number } {
-  let risks = 0;
+interface RiskItem {
+  id: string;
+  title: string;
+  description: string;
+  severity: "low" | "medium" | "high";
+  suggestion: string;
+}
 
-  // Check for high number of failed logins
-  if ((stats.failedLogins || 0) > 10) risks += 2;
-  else if ((stats.failedLogins || 0) > 5) risks += 1;
+// Calculate risk level and return specific risks
+function calculateRiskLevel(stats: Partial<SecurityStats>): { level: "low" | "medium" | "high"; risks: number; riskItems: RiskItem[] } {
+  let risks = 0;
+  const riskItems: RiskItem[] = [];
 
   // Check SSH port
-  if (stats.sshPort === 22) risks += 1;
+  if (stats.sshPort === 22) {
+    risks += 1;
+    riskItems.push({
+      id: "ssh_port",
+      title: "SSH 使用默认端口",
+      description: "SSH 端口为 22，容易被扫描和攻击",
+      severity: "medium",
+      suggestion: "建议修改为其他端口（如 2222、10022 等）",
+    });
+  }
 
   // Check firewall
-  if (!stats.firewallEnabled) risks += 2;
+  if (!stats.firewallEnabled) {
+    risks += 2;
+    riskItems.push({
+      id: "firewall",
+      title: "防火墙未启用",
+      description: "系统防火墙（UFW/firewalld）未启用，服务器暴露在网络攻击风险中",
+      severity: "high",
+      suggestion: "建议启用防火墙并配置规则",
+    });
+  }
+
+  // Check for failed logins
+  if ((stats.failedLogins || 0) > 10) {
+    risks += 2;
+    riskItems.push({
+      id: "failed_logins",
+      title: "大量登录失败",
+      description: `检测到 ${stats.failedLogins} 次登录失败，可能正在遭受暴力破解攻击`,
+      severity: "high",
+      suggestion: "建议启用 fail2ban 并检查可疑 IP",
+    });
+  } else if ((stats.failedLogins || 0) > 5) {
+    risks += 1;
+    riskItems.push({
+      id: "failed_logins",
+      title: "多次登录失败",
+      description: `检测到 ${stats.failedLogins} 次登录失败`,
+      severity: "medium",
+      suggestion: "建议关注登录日志，必要时启用 fail2ban",
+    });
+  }
 
   const level = risks >= 4 ? "high" : risks >= 2 ? "medium" : "low";
-  return { level, risks };
+  return { level, risks, riskItems };
 }
 
 async function handleGET(request: NextRequest) {
@@ -204,7 +248,7 @@ async function handleGET(request: NextRequest) {
         failedLogins,
       };
 
-      const { level, risks } = calculateRiskLevel(partialStats);
+      const { level, risks, riskItems } = calculateRiskLevel(partialStats);
 
       const stats: SecurityStats = {
         riskLevel: level,
@@ -217,7 +261,7 @@ async function handleGET(request: NextRequest) {
         blockedIps: uniqueFailedIps.size,
       };
 
-      return NextResponse.json({ stats, recentRecords: records.slice(0, 10) });
+      return NextResponse.json({ stats, riskItems, recentRecords: records.slice(0, 10) });
     }
 
     if (action === "settings") {
@@ -247,6 +291,99 @@ async function handleGET(request: NextRequest) {
   }
 }
 
+// 修改 SSH 端口 - 使用 execFileSync 避免命令注入
+async function changeSSHPort(newPort: number): Promise<{ success: boolean; message: string }> {
+  const { execFileSync } = require("child_process");
+  const currentPort = getSshPort();
+
+  // 严格验证端口号
+  if (!Number.isInteger(newPort) || newPort < 1 || newPort > 65535) {
+    return { success: false, message: "端口号必须在 1-65535 之间的整数" };
+  }
+
+  if (newPort === currentPort) {
+    return { success: true, message: "端口未变化" };
+  }
+
+  try {
+    // 1. 先在防火墙中允许新端口
+    try {
+      // 尝试 UFW
+      execFileSync("ufw", ["allow", `${newPort}/tcp`], { stdio: "pipe" });
+    } catch {
+      // 尝试 firewalld
+      try {
+        execFileSync("firewall-cmd", ["--permanent", `--add-port=${newPort}/tcp`], { stdio: "pipe" });
+        execFileSync("firewall-cmd", ["--reload"], { stdio: "pipe" });
+      } catch {
+        // 没有防火墙或防火墙未启用，继续
+      }
+    }
+
+    // 2. 修改 SSH 配置
+    const sshdConfig = fs.readFileSync("/etc/ssh/sshd_config", "utf-8");
+    let newConfig = sshdConfig;
+
+    // 替换或添加 Port 配置
+    if (/^Port\s+\d+/m.test(sshdConfig)) {
+      newConfig = sshdConfig.replace(/^Port\s+\d+/m, `Port ${newPort}`);
+    } else if (/^#Port\s+\d+/m.test(sshdConfig)) {
+      newConfig = sshdConfig.replace(/^#Port\s+\d+/m, `Port ${newPort}`);
+    } else {
+      newConfig = `Port ${newPort}\n` + sshdConfig;
+    }
+
+    fs.writeFileSync("/etc/ssh/sshd_config", newConfig, "utf-8");
+
+    // 3. 重启 SSH 服务
+    try {
+      execFileSync("systemctl", ["restart", "sshd"], { stdio: "pipe" });
+    } catch {
+      execFileSync("systemctl", ["restart", "ssh"], { stdio: "pipe" });
+    }
+
+    return { success: true, message: `SSH 端口已修改为 ${newPort}，请使用新端口连接测试` };
+  } catch (error: any) {
+    return { success: false, message: `修改失败: ${error.message}` };
+  }
+}
+
+// 切换防火墙状态
+async function toggleFirewall(enable: boolean): Promise<{ success: boolean; message: string }> {
+  const { execFileSync } = require("child_process");
+
+  try {
+    const sshPort = getSshPort();
+
+    if (enable) {
+      // 启用防火墙前，确保 SSH 和面板端口已允许
+      try {
+        execFileSync("ufw", ["allow", `${sshPort}/tcp`], { stdio: "pipe" });
+        execFileSync("ufw", ["allow", "8888/tcp"], { stdio: "pipe" });
+        execFileSync("ufw", ["--force", "enable"], { stdio: "pipe" });
+        return { success: true, message: "防火墙已启用" };
+      } catch {
+        // 尝试 firewalld
+        execFileSync("firewall-cmd", ["--permanent", `--add-port=${sshPort}/tcp`], { stdio: "pipe" });
+        execFileSync("firewall-cmd", ["--permanent", "--add-port=8888/tcp"], { stdio: "pipe" });
+        execFileSync("systemctl", ["start", "firewalld"], { stdio: "pipe" });
+        execFileSync("firewall-cmd", ["--reload"], { stdio: "pipe" });
+        return { success: true, message: "防火墙已启用" };
+      }
+    } else {
+      try {
+        execFileSync("ufw", ["disable"], { stdio: "pipe" });
+        return { success: true, message: "防火墙已禁用" };
+      } catch {
+        execFileSync("systemctl", ["stop", "firewalld"], { stdio: "pipe" });
+        return { success: true, message: "防火墙已禁用" };
+      }
+    }
+  } catch (error: any) {
+    return { success: false, message: `操作失败: ${error.message}` };
+  }
+}
+
 async function handlePOST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -254,17 +391,38 @@ async function handlePOST(request: NextRequest) {
 
     if (action === "save_settings") {
       const db = getDatabase();
+      const results: { field: string; success: boolean; message: string }[] = [];
+
       try {
         const stmt = db.prepare(
           "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)"
         );
 
+        // 修改 SSH 端口
+        if (settings.sshPort) {
+          const sshResult = await changeSSHPort(parseInt(settings.sshPort, 10));
+          results.push({ field: "sshPort", ...sshResult });
+        }
+
+        // 修改面板端口（只保存，需要重启生效）
         if (settings.panelPort) {
           stmt.run("panel_port", String(settings.panelPort));
+          results.push({ field: "panelPort", success: true, message: "已保存，重启面板后生效" });
         }
+
+        // 修改安全入口
         if (settings.securityPath) {
           stmt.run("security_path", settings.securityPath);
+          results.push({ field: "securityPath", success: true, message: "安全入口已更新" });
         }
+
+        // 切换防火墙
+        if (settings.firewallEnabled !== undefined) {
+          const fwResult = await toggleFirewall(settings.firewallEnabled);
+          results.push({ field: "firewall", ...fwResult });
+        }
+
+        // IP 白名单/黑名单
         if (settings.ipWhitelist) {
           stmt.run("security_ip_whitelist", settings.ipWhitelist.join(","));
         }
@@ -272,7 +430,12 @@ async function handlePOST(request: NextRequest) {
           stmt.run("security_ip_blacklist", settings.ipBlacklist.join(","));
         }
 
-        return NextResponse.json({ success: true, message: "Settings saved" });
+        const hasError = results.some(r => !r.success);
+        return NextResponse.json({
+          success: !hasError,
+          results,
+          message: hasError ? "部分设置保存失败" : "设置已保存"
+        });
       } finally {
         db.close();
       }

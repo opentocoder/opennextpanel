@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { SystemStatus, OverviewCards, TrafficChart, SoftwareGrid } from "@/components/dashboard";
 
 interface SystemData {
@@ -11,8 +11,25 @@ interface SystemData {
   network: { upload: number; download: number; totalSent: number; totalReceived: number };
 }
 
+interface OverviewData {
+  sites: number;
+  databases: number;
+  ftps: number;
+  risks: number;
+}
+
+interface SoftwareItem {
+  id: number;
+  name: string;
+  title: string;
+  version: string;
+  status: "running" | "stopped" | "not_installed";
+}
+
 export default function HomePage() {
   const [systemData, setSystemData] = useState<SystemData | null>(null);
+  const [overview, setOverview] = useState<OverviewData>({ sites: 0, databases: 0, ftps: 0, risks: 0 });
+  const [software, setSoftware] = useState<SoftwareItem[]>([]);
   const [trafficHistory, setTrafficHistory] = useState<{
     time: string[];
     upload: number[];
@@ -23,6 +40,50 @@ export default function HomePage() {
     download: [],
   });
 
+  const fetchOverview = useCallback(async () => {
+    try {
+      const [sitesRes, dbRes, ftpRes, secRes, swRes] = await Promise.all([
+        fetch("/api/sites"),
+        fetch("/api/database"),
+        fetch("/api/ftp"),
+        fetch("/api/security?action=stats"),
+        fetch("/api/software"),
+      ]);
+      const sitesData = await sitesRes.json();
+      const dbData = await dbRes.json();
+      const ftpData = await ftpRes.json();
+      const secData = await secRes.json();
+      const swData = await swRes.json();
+
+      setOverview({
+        sites: sitesData.sites?.length || 0,
+        databases: dbData.databases?.length || 0,
+        ftps: ftpData.accounts?.length || 0,
+        risks: secData.stats?.totalRisks || 0,
+      });
+
+      if (swData.software) {
+        const swList = swData.software
+          .filter((s: any) => s.status === "active" || s.status === "inactive" || s.status === "installed")
+          .slice(0, 6)
+          .map((s: any, i: number) => ({
+            id: i + 1,
+            name: s.id,
+            title: s.name,
+            version: s.version || "",
+            status: s.status === "active" ? "running" : s.status === "inactive" ? "stopped" : "stopped",
+          }));
+        setSoftware(swList);
+      }
+    } catch (error) {
+      console.error("Failed to fetch overview:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOverview();
+  }, [fetchOverview]);
+
   useEffect(() => {
     const fetchSystemInfo = async () => {
       try {
@@ -30,7 +91,6 @@ export default function HomePage() {
         const data = await res.json();
         setSystemData(data);
 
-        // 更新流量历史
         setTrafficHistory((prev) => {
           const now = new Date().toLocaleTimeString("zh-CN", {
             hour: "2-digit",
@@ -52,15 +112,6 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
-  const mockSoftware = [
-    { id: 1, name: "nginx", title: "Nginx", version: "1.24.0", status: "running" as const },
-    { id: 2, name: "mysql", title: "MySQL", version: "8.0.35", status: "running" as const },
-    { id: 3, name: "php", title: "PHP-8.2", version: "8.2.12", status: "running" as const },
-    { id: 4, name: "redis", title: "Redis", version: "7.2.3", status: "stopped" as const },
-    { id: 5, name: "docker", title: "Docker", version: "24.0.7", status: "running" as const },
-    { id: 6, name: "node", title: "Node.js", version: "20.10.0", status: "running" as const },
-  ];
-
   if (!systemData) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -81,10 +132,10 @@ export default function HomePage() {
 
       {/* 概览卡片 */}
       <OverviewCards
-        sites={12}
-        databases={5}
-        ftps={2}
-        risks={0}
+        sites={overview.sites}
+        databases={overview.databases}
+        ftps={overview.ftps}
+        risks={overview.risks}
       />
 
       {/* 流量图表 + 软件网格 */}
@@ -96,7 +147,11 @@ export default function HomePage() {
           currentUpload={systemData.network.upload}
           currentDownload={systemData.network.download}
         />
-        <SoftwareGrid software={mockSoftware} />
+        <SoftwareGrid software={software.length > 0 ? software : [
+          { id: 1, name: "nginx", title: "Nginx", version: "-", status: "stopped" },
+          { id: 2, name: "mysql", title: "MySQL", version: "-", status: "stopped" },
+          { id: 3, name: "php", title: "PHP", version: "-", status: "stopped" },
+        ]} />
       </div>
     </div>
   );

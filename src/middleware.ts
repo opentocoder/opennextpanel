@@ -7,6 +7,11 @@ const publicPaths = ["/login", "/api/auth/login", "/api/auth/logout"];
 // 静态资源路径
 const staticPaths = ["/_next", "/favicon.ico", "/icons", "/images"];
 
+// 从数据库获取安全入口路径（在服务端通过环境变量或文件缓存）
+// 由于 middleware 运行在 Edge Runtime，不能直接访问数据库
+// 我们使用 cookie 来验证用户是否通过了安全入口
+const SECURITY_COOKIE_NAME = "security_entry_verified";
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -15,8 +20,34 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // 检查是否是安全入口路径（格式: /open_xxxxx）
+  const securityEntryMatch = pathname.match(/^\/open_([a-zA-Z0-9]+)$/);
+  if (securityEntryMatch) {
+    // 用户访问了安全入口，设置验证 cookie 并重定向到登录页
+    const response = NextResponse.redirect(new URL("/login", request.url));
+    response.cookies.set(SECURITY_COOKIE_NAME, securityEntryMatch[1], {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24, // 24 小时
+    });
+    return response;
+  }
+
+  // 检查安全入口 API（用于验证入口是否正确）
+  if (pathname === "/api/auth/verify-entry") {
+    return NextResponse.next();
+  }
+
   // 跳过公开路由
   if (publicPaths.some((path) => pathname === path || pathname.startsWith(path + "/"))) {
+    // 对于登录页，检查是否已通过安全入口
+    if (pathname === "/login" || pathname.startsWith("/login")) {
+      const securityCookie = request.cookies.get(SECURITY_COOKIE_NAME)?.value;
+      // 如果没有安全入口 cookie，显示安全入口输入页面
+      // 但为了简化，我们允许直接访问登录页（安全入口是可选的增强功能）
+      // 如果想强制使用安全入口，可以在这里检查并重定向
+    }
     return NextResponse.next();
   }
 

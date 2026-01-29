@@ -1,0 +1,24 @@
+FROM ubuntu:22.04
+
+# 避免交互式提示
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Shanghai
+
+# 安装基础工具
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    sudo \
+    systemctl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 创建工作目录
+WORKDIR /root
+
+# 复制安装脚本
+COPY scripts/install_panel.sh /root/install_panel.sh
+RUN chmod +x /root/install_panel.sh
+
+# 默认命令
+CMD ["/bin/bash"]
