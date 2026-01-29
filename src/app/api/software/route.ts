@@ -364,6 +364,55 @@ const SUPPORTED_SERVICES = [
     icon: "grafana",
     description: "数据可视化平台",
   },
+  // 常用工具
+  {
+    id: "git",
+    name: "Git",
+    serviceName: null,
+    versionCmd: ["git", "--version"],
+    category: "tools",
+    icon: "git",
+    description: "分布式版本控制系统",
+  },
+  {
+    id: "vim",
+    name: "Vim",
+    serviceName: null,
+    versionCmd: ["vim", "--version"],
+    category: "tools",
+    icon: "vim",
+    description: "强大的文本编辑器",
+  },
+  {
+    id: "htop",
+    name: "htop",
+    serviceName: null,
+    versionCmd: ["htop", "--version"],
+    category: "tools",
+    icon: "htop",
+    description: "交互式进程查看器",
+  },
+  {
+    id: "zip",
+    name: "Zip/Unzip",
+    serviceName: null,
+    versionCmd: ["zip", "--version"],
+    category: "tools",
+    icon: "zip",
+    description: "文件压缩和解压工具",
+  },
+  // MariaDB
+  {
+    id: "mariadb",
+    name: "MariaDB",
+    serviceName: "mariadb",
+    altServiceNames: ["mysql"],
+    versionCmd: ["mariadb", "--version"],
+    altVersionCmd: ["mysql", "--version"],
+    category: "database",
+    icon: "mariadb",
+    description: "MySQL 的开源分支",
+  },
 ];
 
 // 获取服务版本

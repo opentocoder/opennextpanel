@@ -166,6 +166,177 @@ const PACKAGE_MAP: Record<string, Record<PackageManager, string[]>> = {
     pacman: ["pure-ftpd"],
     apk: ["pure-ftpd"],
   },
+  // Web 服务器
+  apache: {
+    apt: ["apache2"],
+    yum: ["httpd"],
+    dnf: ["httpd"],
+    pacman: ["apache"],
+    apk: ["apache2"],
+  },
+  openresty: {
+    apt: ["openresty"],
+    yum: ["openresty"],
+    dnf: ["openresty"],
+    pacman: ["openresty"],
+    apk: ["openresty"],
+  },
+  caddy: {
+    apt: ["caddy"],
+    yum: ["caddy"],
+    dnf: ["caddy"],
+    pacman: ["caddy"],
+    apk: ["caddy"],
+  },
+  // PHP 旧版本
+  "php74": {
+    apt: ["php7.4", "php7.4-fpm", "php7.4-cli", "php7.4-mysql", "php7.4-curl", "php7.4-gd", "php7.4-mbstring", "php7.4-xml", "php7.4-zip"],
+    yum: ["php74", "php74-php-fpm", "php74-php-cli", "php74-php-mysqlnd"],
+    dnf: ["php74", "php74-php-fpm", "php74-php-cli", "php74-php-mysqlnd"],
+    pacman: ["php"],
+    apk: ["php7", "php7-fpm"],
+  },
+  "php56": {
+    apt: ["php5.6", "php5.6-fpm", "php5.6-cli", "php5.6-mysql", "php5.6-curl", "php5.6-gd", "php5.6-mbstring", "php5.6-xml"],
+    yum: ["php56", "php56-php-fpm", "php56-php-cli"],
+    dnf: ["php56", "php56-php-fpm", "php56-php-cli"],
+    pacman: ["php"],
+    apk: ["php5", "php5-fpm"],
+  },
+  // 运行时
+  java: {
+    apt: ["default-jdk"],
+    yum: ["java-17-openjdk", "java-17-openjdk-devel"],
+    dnf: ["java-17-openjdk", "java-17-openjdk-devel"],
+    pacman: ["jdk-openjdk"],
+    apk: ["openjdk17"],
+  },
+  go: {
+    apt: ["golang"],
+    yum: ["golang"],
+    dnf: ["golang"],
+    pacman: ["go"],
+    apk: ["go"],
+  },
+  rust: {
+    apt: ["rustc", "cargo"],
+    yum: ["rust", "cargo"],
+    dnf: ["rust", "cargo"],
+    pacman: ["rust"],
+    apk: ["rust", "cargo"],
+  },
+  // Java 应用服务器
+  tomcat: {
+    apt: ["tomcat10"],
+    yum: ["tomcat"],
+    dnf: ["tomcat"],
+    pacman: ["tomcat10"],
+    apk: ["tomcat-native"],
+  },
+  // 工具
+  vsftpd: {
+    apt: ["vsftpd"],
+    yum: ["vsftpd"],
+    dnf: ["vsftpd"],
+    pacman: ["vsftpd"],
+    apk: ["vsftpd"],
+  },
+  composer: {
+    apt: ["composer"],
+    yum: ["composer"],
+    dnf: ["composer"],
+    pacman: ["composer"],
+    apk: ["composer"],
+  },
+  supervisor: {
+    apt: ["supervisor"],
+    yum: ["supervisor"],
+    dnf: ["supervisor"],
+    pacman: ["supervisor"],
+    apk: ["supervisor"],
+  },
+  adminer: {
+    apt: ["adminer"],
+    yum: ["adminer"],
+    dnf: ["adminer"],
+    pacman: ["adminer"],
+    apk: ["adminer"],
+  },
+  // 安全
+  certbot: {
+    apt: ["certbot", "python3-certbot-nginx"],
+    yum: ["certbot", "python3-certbot-nginx"],
+    dnf: ["certbot", "python3-certbot-nginx"],
+    pacman: ["certbot", "certbot-nginx"],
+    apk: ["certbot", "certbot-nginx"],
+  },
+  clamav: {
+    apt: ["clamav", "clamav-daemon"],
+    yum: ["clamav", "clamav-update", "clamd"],
+    dnf: ["clamav", "clamav-update", "clamd"],
+    pacman: ["clamav"],
+    apk: ["clamav"],
+  },
+  // 消息队列
+  rabbitmq: {
+    apt: ["rabbitmq-server"],
+    yum: ["rabbitmq-server"],
+    dnf: ["rabbitmq-server"],
+    pacman: ["rabbitmq"],
+    apk: ["rabbitmq-server"],
+  },
+  // 搜索引擎
+  elasticsearch: {
+    apt: ["elasticsearch"],
+    yum: ["elasticsearch"],
+    dnf: ["elasticsearch"],
+    pacman: ["elasticsearch"],
+    apk: ["elasticsearch"],
+  },
+  // 监控
+  prometheus: {
+    apt: ["prometheus"],
+    yum: ["prometheus"],
+    dnf: ["prometheus"],
+    pacman: ["prometheus"],
+    apk: ["prometheus"],
+  },
+  grafana: {
+    apt: ["grafana"],
+    yum: ["grafana"],
+    dnf: ["grafana"],
+    pacman: ["grafana"],
+    apk: ["grafana"],
+  },
+  // 常用工具
+  git: {
+    apt: ["git"],
+    yum: ["git"],
+    dnf: ["git"],
+    pacman: ["git"],
+    apk: ["git"],
+  },
+  vim: {
+    apt: ["vim"],
+    yum: ["vim-enhanced"],
+    dnf: ["vim-enhanced"],
+    pacman: ["vim"],
+    apk: ["vim"],
+  },
+  htop: {
+    apt: ["htop"],
+    yum: ["htop"],
+    dnf: ["htop"],
+    pacman: ["htop"],
+    apk: ["htop"],
+  },
+  zip: {
+    apt: ["zip", "unzip"],
+    yum: ["zip", "unzip"],
+    dnf: ["zip", "unzip"],
+    pacman: ["zip", "unzip"],
+    apk: ["zip", "unzip"],
+  },
 };
 
 // 检测系统的包管理器

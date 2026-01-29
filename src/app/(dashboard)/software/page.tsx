@@ -413,6 +413,46 @@ const softwareMeta: Omit<Software, "status">[] = [
     size: "300 MB",
     homepage: "https://grafana.com",
   },
+  // 常用工具
+  {
+    id: "git",
+    name: "Git",
+    version: "2.43.0",
+    description: "分布式版本控制系统",
+    icon: "📦",
+    category: "tools",
+    size: "45 MB",
+    homepage: "https://git-scm.com",
+  },
+  {
+    id: "vim",
+    name: "Vim",
+    version: "9.1",
+    description: "强大的文本编辑器",
+    icon: "📝",
+    category: "tools",
+    size: "15 MB",
+    homepage: "https://vim.org",
+  },
+  {
+    id: "htop",
+    name: "htop",
+    version: "3.3.0",
+    description: "交互式进程查看器",
+    icon: "📊",
+    category: "tools",
+    size: "2 MB",
+    homepage: "https://htop.dev",
+  },
+  {
+    id: "zip",
+    name: "Zip/Unzip",
+    version: "3.0",
+    description: "文件压缩和解压工具",
+    icon: "🗜️",
+    category: "tools",
+    size: "1 MB",
+  },
 ];
 
 // 初始化时所有软件状态为 not_installed，等待 API 更新
