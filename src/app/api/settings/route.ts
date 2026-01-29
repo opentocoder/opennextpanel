@@ -114,7 +114,7 @@ async function handleGET(request: NextRequest) {
       const basicSettings: BasicSettings = {
         panelName: settings.panel_name || "OpenPanel",
         panelPort: parseInt(settings.panel_port || "8888", 10),
-        securityPath: settings.security_path || "/open_panel",
+        securityPath: settings.security_path ?? "",
         username: user?.username || "admin",
         sessionTimeout: parseInt(settings.session_timeout || "120", 10),
         autoBackup: settings.auto_backup === "1",
@@ -136,7 +136,7 @@ async function handleGET(request: NextRequest) {
     const basicSettings: BasicSettings = {
       panelName: settings.panel_name || "OpenPanel",
       panelPort: parseInt(settings.panel_port || "8888", 10),
-      securityPath: settings.security_path || "/open_panel",
+      securityPath: settings.security_path ?? "",
       username: user?.username || "admin",
       sessionTimeout: parseInt(settings.session_timeout || "120", 10),
       autoBackup: settings.auto_backup === "1",

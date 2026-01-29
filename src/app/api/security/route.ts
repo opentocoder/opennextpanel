@@ -255,7 +255,7 @@ async function handleGET(request: NextRequest) {
         totalRisks: risks,
         sshPort,
         panelPort: parseInt(settings.panel_port || "8888", 10),
-        securityPath: settings.security_path || "/open_panel",
+        securityPath: settings.security_path ?? "",
         firewallEnabled,
         failedLogins,
         blockedIps: uniqueFailedIps.size,
@@ -273,7 +273,7 @@ async function handleGET(request: NextRequest) {
         settings: {
           sshPort,
           panelPort: parseInt(settings.panel_port || "8888", 10),
-          securityPath: settings.security_path || "/open_panel",
+          securityPath: settings.security_path ?? "",
           firewallEnabled,
           ipWhitelist: settings.security_ip_whitelist ? settings.security_ip_whitelist.split(",") : [],
           ipBlacklist: settings.security_ip_blacklist ? settings.security_ip_blacklist.split(",") : [],

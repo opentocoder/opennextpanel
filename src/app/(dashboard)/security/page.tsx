@@ -48,7 +48,7 @@ export default function SecurityPage() {
     totalRisks: 0,
     sshPort: 22,
     panelPort: 8888,
-    securityPath: "/open_panel",
+    securityPath: "",
     firewallEnabled: true,
     failedLogins: 0,
     blockedIps: 0,
@@ -58,7 +58,7 @@ export default function SecurityPage() {
   const [settings, setSettings] = useState<SecuritySettingsData>({
     sshPort: 22,
     panelPort: 8888,
-    securityPath: "/open_panel",
+    securityPath: "",
     firewallEnabled: true,
     ipWhitelist: [],
     ipBlacklist: [],

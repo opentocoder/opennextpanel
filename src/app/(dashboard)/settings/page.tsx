@@ -34,7 +34,7 @@ export default function SettingsPage() {
   const [basicSettings, setBasicSettings] = useState<BasicSettingsData>({
     panelName: "OpenPanel",
     panelPort: 8888,
-    securityPath: "/open_panel",
+    securityPath: "",
     username: "admin",
     sessionTimeout: 120,
     autoBackup: true,
