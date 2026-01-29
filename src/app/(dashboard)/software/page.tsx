@@ -211,11 +211,12 @@ const softwareMeta: Omit<Software, "status">[] = [
     name: "Python",
     version: "3.12.1",
     versions: ["3.12.1", "3.11.7", "3.10.13"],
-    description: "通用编程语言",
+    description: "通用编程语言（系统必需）",
     icon: "🐍",
     category: "runtime",
     size: "85 MB",
     homepage: "https://python.org",
+    systemRequired: true,  // 系统工具依赖
   },
   {
     id: "java",
