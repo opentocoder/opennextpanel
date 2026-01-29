@@ -463,7 +463,9 @@ MYSQL_ROOT_USER=$MYSQL_PANEL_USER
 MYSQL_ROOT_PASSWORD=$MYSQL_PANEL_PASSWORD
 EOF
 
+    # 设置安全权限（只有 root 可读写）
     chmod 600 "$INSTALL_DIR/.env"
+    chown root:root "$INSTALL_DIR/.env"
 
     # 保存密码供显示
     ADMIN_PASSWORD="$admin_password"
@@ -478,6 +480,14 @@ EOF
         print_success "数据库初始化完成"
     else
         print_warning "未找到数据库初始化脚本，跳过"
+    fi
+
+    # 保护数据目录（包含 SQLite 数据库和敏感信息）
+    if [ -d "$INSTALL_DIR/data" ]; then
+        chmod 700 "$INSTALL_DIR/data"
+        chown -R root:root "$INSTALL_DIR/data"
+        # 数据库文件只有 root 可读写
+        [ -f "$INSTALL_DIR/data/panel.db" ] && chmod 600 "$INSTALL_DIR/data/panel.db"
     fi
 }
 
