@@ -243,7 +243,8 @@ if (existingAdmin) {
 const settingsStmt = db.prepare("INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)");
 settingsStmt.run("panel_name", "OpenPanel", "面板名称");
 settingsStmt.run("panel_port", "8888", "面板端口");
-settingsStmt.run("security_path", "/open_" + Math.random().toString(36).substring(7), "安全入口");
+// 安全入口默认为空（禁用），用户可在设置中启用
+settingsStmt.run("security_path", "", "安全入口");
 settingsStmt.run("api_enabled", "0", "API开关");
 settingsStmt.run("api_key", "", "API密钥");
 
