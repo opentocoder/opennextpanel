@@ -264,7 +264,7 @@ export function initDatabase() {
   `);
   settingsStmt.run("panel_name", "OpenPanel", "面板名称");
   settingsStmt.run("panel_port", "8888", "面板端口");
-  settingsStmt.run("security_path", "/open_" + Math.random().toString(36).substring(7), "安全入口");
+  settingsStmt.run("security_path", "", "安全入口");  // 默认为空（关闭），手动设置后生效
   settingsStmt.run("api_enabled", "0", "API开关");
   settingsStmt.run("api_key", "", "API密钥");
 
