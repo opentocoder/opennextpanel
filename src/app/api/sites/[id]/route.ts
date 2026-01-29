@@ -1,0 +1,125 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { withAuth } from "@/lib/auth/middleware";
+
+async function handleGET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    const db = getDb();
+    const site = db.prepare(`
+      SELECT
+        s.*,
+        (SELECT COUNT(*) FROM backups WHERE site_id = s.id) as backupCount
+      FROM sites s
+      WHERE s.id = ?
+    `).get(id);
+
+    if (!site) {
+      return NextResponse.json({ error: "Site not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ site });
+  } catch (error) {
+    console.error("Failed to fetch site:", error);
+    return NextResponse.json({ error: "Failed to fetch site" }, { status: 500 });
+  }
+}
+
+async function handlePUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    const body = await request.json();
+    const db = getDb();
+
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (body.domain !== undefined) {
+      updates.push("domain = ?");
+      values.push(body.domain);
+    }
+    if (body.rootPath !== undefined) {
+      updates.push("root_path = ?");
+      values.push(body.rootPath);
+    }
+    if (body.phpVersion !== undefined) {
+      updates.push("php_version = ?");
+      values.push(body.phpVersion);
+    }
+    if (body.status !== undefined) {
+      updates.push("status = ?");
+      values.push(body.status);
+    }
+    if (body.remark !== undefined) {
+      updates.push("remark = ?");
+      values.push(body.remark);
+    }
+    if (body.sslStatus !== undefined) {
+      updates.push("ssl_status = ?");
+      values.push(body.sslStatus);
+    }
+    if (body.sslExpireDays !== undefined) {
+      updates.push("ssl_expire_days = ?");
+      values.push(body.sslExpireDays);
+    }
+
+    if (updates.length === 0) {
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    }
+
+    updates.push("updated_at = CURRENT_TIMESTAMP");
+    values.push(id);
+
+    db.prepare(`
+      UPDATE sites
+      SET ${updates.join(", ")}
+      WHERE id = ?
+    `).run(...values);
+
+    return NextResponse.json({ success: true, message: "Site updated successfully" });
+  } catch (error) {
+    console.error("Failed to update site:", error);
+    return NextResponse.json({ error: "Failed to update site" }, { status: 500 });
+  }
+}
+
+async function handleDELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    const db = getDb();
+
+    // Delete associated FTP accounts
+    db.prepare("DELETE FROM ftps WHERE site_id = ?").run(id);
+
+    // Delete associated databases
+    db.prepare("DELETE FROM databases WHERE site_id = ?").run(id);
+
+    // Delete associated backups
+    db.prepare("DELETE FROM backups WHERE site_id = ?").run(id);
+
+    // Delete the site
+    const result = db.prepare("DELETE FROM sites WHERE id = ?").run(id);
+
+    if (result.changes === 0) {
+      return NextResponse.json({ error: "Site not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, message: "Site deleted successfully" });
+  } catch (error) {
+    console.error("Failed to delete site:", error);
+    return NextResponse.json({ error: "Failed to delete site" }, { status: 500 });
+  }
+}
+
+export const GET = withAuth(handleGET);
+export const PUT = withAuth(handlePUT);
+export const DELETE = withAuth(handleDELETE);
