@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 INSTALL_DIR="/opt/openpanel"
 SERVICE_NAME="openpanel"
 DEFAULT_PORT=8888
-REPO_URL="${OPENPANEL_REPO_URL:-https://github.com/yourusername/openpanel.git}"
+REPO_URL="${OPENPANEL_REPO_URL:-https://github.com/opentocoder/openpanel.git}"
 DOWNLOAD_URL="${OPENPANEL_DOWNLOAD_URL:-}"  # 支持从 tar.gz 下载
 MIN_NODE_VERSION=20
 
@@ -348,7 +348,7 @@ create_service() {
     cat > /etc/systemd/system/${SERVICE_NAME}.service << EOF
 [Unit]
 Description=OpenPanel Server Management Panel
-Documentation=https://github.com/yourusername/openpanel
+Documentation=https://github.com/opentocoder/openpanel
 After=network.target
 
 [Service]
