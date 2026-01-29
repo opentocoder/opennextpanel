@@ -320,22 +320,33 @@ install_mysql() {
         esac
     fi
 
-    # 生成 MySQL root 密码
-    MYSQL_ROOT_PASSWORD=$(generate_password 16)
+    # 生成 OpenPanel 专用 MySQL 用户密码
+    MYSQL_PANEL_USER="openpanel"
+    MYSQL_PANEL_PASSWORD=$(generate_password 20)
 
-    # 配置 MySQL root 用户使用密码认证（Ubuntu 默认用 auth_socket）
-    print_info "配置 MySQL root 用户..."
+    print_info "创建 OpenPanel 专用 MySQL 用户..."
 
-    # 尝试不同的方式设置密码
+    # 尝试连接 MySQL 并创建用户
     if mysql -u root -e "SELECT 1" &>/dev/null; then
         # 可以无密码登录（auth_socket 或空密码）
-        mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_ROOT_PASSWORD}'; FLUSH PRIVILEGES;" 2>/dev/null || \
-        mysql -u root -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${MYSQL_ROOT_PASSWORD}'); FLUSH PRIVILEGES;" 2>/dev/null || \
-        mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}'; FLUSH PRIVILEGES;" 2>/dev/null
-        print_success "MySQL root 密码已设置"
+        mysql -u root << EOF
+-- 创建 OpenPanel 管理用户（拥有完整权限用于创建/删除数据库和用户）
+CREATE USER IF NOT EXISTS '${MYSQL_PANEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PANEL_PASSWORD}';
+
+-- 授予必要权限：创建数据库、创建用户、授权
+GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_PANEL_USER}'@'localhost' WITH GRANT OPTION;
+
+FLUSH PRIVILEGES;
+EOF
+        if [ $? -eq 0 ]; then
+            print_success "MySQL 用户 '${MYSQL_PANEL_USER}' 创建成功"
+        else
+            print_warning "MySQL 用户创建失败，请手动配置"
+            MYSQL_PANEL_PASSWORD=""
+        fi
     else
-        print_warning "无法配置 MySQL，请手动设置"
-        MYSQL_ROOT_PASSWORD=""
+        print_warning "无法连接 MySQL，请手动创建用户"
+        MYSQL_PANEL_PASSWORD=""
     fi
 }
 
@@ -374,8 +385,11 @@ LOG_LEVEL=info
 # 运行环境
 NODE_ENV=production
 
-# MySQL 配置
-MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
+# MySQL 配置（OpenPanel 专用用户，非 root）
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_ROOT_USER=$MYSQL_PANEL_USER
+MYSQL_ROOT_PASSWORD=$MYSQL_PANEL_PASSWORD
 EOF
 
     chmod 600 "$INSTALL_DIR/.env"
@@ -522,8 +536,11 @@ show_result() {
     echo -e "管理员账号: ${YELLOW}admin${NC}"
     echo -e "管理员密码: ${YELLOW}${ADMIN_PASSWORD}${NC}"
     echo ""
-    if [ -n "$MYSQL_ROOT_PASSWORD" ]; then
-        echo -e "MySQL root 密码: ${YELLOW}${MYSQL_ROOT_PASSWORD}${NC}"
+    if [ -n "$MYSQL_PANEL_PASSWORD" ]; then
+        echo ""
+        echo -e "MySQL 管理用户: ${YELLOW}${MYSQL_PANEL_USER}${NC}"
+        echo -e "MySQL 密码: ${YELLOW}${MYSQL_PANEL_PASSWORD}${NC}"
+        echo -e "${CYAN}(专用用户，非 root，更安全)${NC}"
         echo ""
     fi
     echo -e "${RED}请立即登录并修改默认密码!${NC}"
