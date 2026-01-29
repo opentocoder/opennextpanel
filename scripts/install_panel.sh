@@ -326,26 +326,47 @@ install_mysql() {
 
     print_info "创建 OpenPanel 专用 MySQL 用户..."
 
-    # 尝试连接 MySQL 并创建用户
-    if mysql -u root -e "SELECT 1" &>/dev/null; then
-        # 可以无密码登录（auth_socket 或空密码）
-        mysql -u root << EOF
--- 创建 OpenPanel 管理用户（拥有完整权限用于创建/删除数据库和用户）
+    # 创建用户的 SQL
+    local create_user_sql="
 CREATE USER IF NOT EXISTS '${MYSQL_PANEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PANEL_PASSWORD}';
-
--- 授予必要权限：创建数据库、创建用户、授权
 GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_PANEL_USER}'@'localhost' WITH GRANT OPTION;
-
 FLUSH PRIVILEGES;
-EOF
-        if [ $? -eq 0 ]; then
-            print_success "MySQL 用户 '${MYSQL_PANEL_USER}' 创建成功"
+"
+
+    # 尝试多种方式连接 MySQL
+    local mysql_connected=false
+
+    # 方式1: 无密码登录（auth_socket 或空密码）
+    if mysql -u root -e "SELECT 1" &>/dev/null 2>&1; then
+        print_info "使用 auth_socket 连接 MySQL..."
+        echo "$create_user_sql" | mysql -u root
+        mysql_connected=true
+    # 方式2: 尝试常见密码（用于已设置密码的情况）
+    elif mysql -u root -p'123456' -e "SELECT 1" &>/dev/null 2>&1; then
+        print_info "使用已有密码连接 MySQL..."
+        echo "$create_user_sql" | mysql -u root -p'123456'
+        mysql_connected=true
+    elif mysql -u root -p'root' -e "SELECT 1" &>/dev/null 2>&1; then
+        echo "$create_user_sql" | mysql -u root -p'root'
+        mysql_connected=true
+    # 方式3: 检查是否已存在 openpanel 用户
+    elif mysql -u openpanel -p"${MYSQL_PANEL_PASSWORD}" -e "SELECT 1" &>/dev/null 2>&1; then
+        print_info "OpenPanel MySQL 用户已存在"
+        mysql_connected=true
+    fi
+
+    if [ "$mysql_connected" = true ]; then
+        # 验证用户是否创建成功
+        if mysql -u "${MYSQL_PANEL_USER}" -p"${MYSQL_PANEL_PASSWORD}" -e "SELECT 1" &>/dev/null 2>&1; then
+            print_success "MySQL 用户 '${MYSQL_PANEL_USER}' 配置成功"
         else
-            print_warning "MySQL 用户创建失败，请手动配置"
-            MYSQL_PANEL_PASSWORD=""
+            print_warning "MySQL 用户验证失败，请检查配置"
         fi
     else
         print_warning "无法连接 MySQL，请手动创建用户"
+        print_info "创建用户命令:"
+        print_info "  mysql -u root -p -e \"CREATE USER '${MYSQL_PANEL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PANEL_PASSWORD}';\""
+        print_info "  mysql -u root -p -e \"GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_PANEL_USER}'@'localhost' WITH GRANT OPTION;\""
         MYSQL_PANEL_PASSWORD=""
     fi
 }
