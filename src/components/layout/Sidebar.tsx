@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Home,
@@ -56,6 +56,18 @@ const menuItems = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // 即使失败也跳转到登录页
+      router.push("/login");
+    }
+  };
 
   return (
     <aside
@@ -106,6 +118,7 @@ export function Sidebar() {
       {/* Logout */}
       <div className="p-2 border-t border-gray-200">
         <button
+          onClick={handleLogout}
           className={cn(
             "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
           )}
