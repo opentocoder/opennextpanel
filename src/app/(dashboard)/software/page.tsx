@@ -141,6 +141,17 @@ const softwareMeta: Omit<Software, "status">[] = [
     homepage: "https://mysql.com",
   },
   {
+    id: "mariadb",
+    name: "MariaDB",
+    version: "10.11",
+    versions: ["10.11", "10.6", "10.5"],
+    description: "MySQL 的开源分支，完全兼容",
+    icon: "🦭",
+    category: "database",
+    size: "400 MB",
+    homepage: "https://mariadb.org",
+  },
+  {
     id: "postgresql",
     name: "PostgreSQL",
     version: "16.2",
