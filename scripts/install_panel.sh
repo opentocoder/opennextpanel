@@ -66,6 +66,7 @@ show_help() {
     echo "  -p, --port PORT     指定面板端口 (默认: 8888)"
     echo "  -d, --dir DIR       指定安装目录 (默认: /opt/openpanel)"
     echo "  -s, --skip-firewall 跳过防火墙配置"
+    echo "  --no-mysql          不安装 MySQL (可后续通过软件商店安装)"
     echo "  -y, --yes           自动确认所有提示"
     echo ""
     echo "示例:"
@@ -603,6 +604,10 @@ main() {
                 SKIP_FIREWALL="true"
                 shift
                 ;;
+            --no-mysql)
+                SKIP_MYSQL="true"
+                shift
+                ;;
             -y|--yes)
                 AUTO_YES="true"
                 shift
@@ -625,6 +630,11 @@ main() {
         echo -e "\n安装配置:"
         echo -e "  安装目录: ${CYAN}$INSTALL_DIR${NC}"
         echo -e "  面板端口: ${CYAN}$PANEL_PORT${NC}"
+        if [ "$SKIP_MYSQL" = "true" ]; then
+            echo -e "  MySQL:    ${YELLOW}不安装${NC}"
+        else
+            echo -e "  MySQL:    ${GREEN}安装${NC}"
+        fi
         echo ""
         read -p "是否继续安装? [Y/n] " -n 1 -r
         echo
@@ -639,7 +649,13 @@ main() {
     download_panel
     install_panel_deps
     build_panel
-    install_mysql
+    if [ "$SKIP_MYSQL" != "true" ]; then
+        install_mysql
+    else
+        print_info "跳过 MySQL 安装 (可通过软件商店安装)"
+        MYSQL_PANEL_USER=""
+        MYSQL_PANEL_PASSWORD=""
+    fi
     create_config
     create_service
     configure_firewall
