@@ -20,7 +20,7 @@ SERVICE_NAME="openpanel"
 DEFAULT_PORT=8888
 REPO_URL="${OPENPANEL_REPO_URL:-https://github.com/opentocoder/openpanel.git}"
 DOWNLOAD_URL="${OPENPANEL_DOWNLOAD_URL:-}"  # 支持从 tar.gz 下载
-MIN_NODE_VERSION=20
+MIN_NODE_VERSION=22
 
 # 打印带颜色的消息
 print_info() {
