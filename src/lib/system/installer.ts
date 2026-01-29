@@ -88,6 +88,13 @@ const PACKAGE_MAP: Record<string, Record<PackageManager, string[]>> = {
     pacman: ["mongodb"],
     apk: ["mongodb"],
   },
+  sqlite: {
+    apt: ["sqlite3"],
+    yum: ["sqlite"],
+    dnf: ["sqlite"],
+    pacman: ["sqlite"],
+    apk: ["sqlite"],
+  },
   memcached: {
     apt: ["memcached"],
     yum: ["memcached"],

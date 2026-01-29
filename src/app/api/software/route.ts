@@ -459,9 +459,13 @@ async function checkServiceInstalled(serviceDef: (typeof SUPPORTED_SERVICES)[0])
       const altAvailable = await isCommandAvailable(altCmd);
       if (altAvailable) return true;
     }
+
+    // 如果有 versionCmd 但命令不存在，则认为未安装
+    // 不要仅凭 systemctl 服务文件判断（可能是残留的依赖包）
+    return false;
   }
 
-  // 检查 systemctl 中是否有该服务
+  // 只有没有 versionCmd 的软件才检查 systemctl
   if (serviceDef.serviceName) {
     const serviceNames = [serviceDef.serviceName, ...(serviceDef.altServiceNames || [])];
     for (const name of serviceNames) {
