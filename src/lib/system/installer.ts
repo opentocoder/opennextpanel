@@ -519,6 +519,62 @@ async function addMongoDBRepo(): Promise<{ success: boolean; message: string }> 
   }
 }
 
+// 创建 MySQL/MariaDB 面板用户（使用随机密码）
+async function createMySQLPanelUser(): Promise<{ success: boolean; message: string }> {
+  const crypto = require("crypto");
+  const fs = require("fs");
+  const path = require("path");
+
+  // 生成随机密码
+  const password = crypto.randomBytes(16).toString("base64").replace(/[+/=]/g, "").substring(0, 20);
+  const username = "openpanel";
+
+  console.log("Creating MySQL panel user...");
+
+  try {
+    // 等待 MySQL 服务启动
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // 尝试使用 socket 认证连接（MariaDB/MySQL 默认方式）
+    const createUserSQL = `
+      CREATE USER IF NOT EXISTS '${username}'@'localhost' IDENTIFIED BY '${password}';
+      GRANT ALL PRIVILEGES ON *.* TO '${username}'@'localhost' WITH GRANT OPTION;
+      FLUSH PRIVILEGES;
+    `;
+
+    await execAsync(`sudo mysql -u root -e "${createUserSQL}"`);
+
+    // 更新 .env 文件
+    const envPath = path.join(process.cwd(), ".env");
+    let envContent = "";
+
+    if (fs.existsSync(envPath)) {
+      envContent = fs.readFileSync(envPath, "utf-8");
+    }
+
+    // 更新或添加 MySQL 配置
+    if (envContent.includes("MYSQL_ROOT_USER=")) {
+      envContent = envContent.replace(/MYSQL_ROOT_USER=.*/, `MYSQL_ROOT_USER=${username}`);
+    } else {
+      envContent += `\nMYSQL_ROOT_USER=${username}`;
+    }
+
+    if (envContent.includes("MYSQL_ROOT_PASSWORD=")) {
+      envContent = envContent.replace(/MYSQL_ROOT_PASSWORD=.*/, `MYSQL_ROOT_PASSWORD=${password}`);
+    } else {
+      envContent += `\nMYSQL_ROOT_PASSWORD=${password}`;
+    }
+
+    fs.writeFileSync(envPath, envContent);
+
+    console.log(`MySQL panel user '${username}' created successfully`);
+    return { success: true, message: `MySQL 用户 '${username}' 创建成功，密码已保存到 .env` };
+  } catch (error: any) {
+    console.log("Failed to create MySQL panel user:", error.message);
+    return { success: false, message: `创建 MySQL 用户失败: ${error.message}` };
+  }
+}
+
 // 添加 Elasticsearch 官方源 (Ubuntu/Debian)
 async function addElasticsearchRepo(): Promise<{ success: boolean; message: string }> {
   try {
@@ -643,6 +699,12 @@ export async function installSoftware(
       } catch (e) {
         console.log(`Note: Could not start service ${serviceName}:`, e);
       }
+    }
+
+    // MySQL/MariaDB 安装后自动创建面板用户
+    if (softwareId === "mysql" || softwareId === "mariadb") {
+      const panelUserResult = await createMySQLPanelUser();
+      logs += `\n${panelUserResult.message}`;
     }
 
     return {
