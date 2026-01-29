@@ -9,6 +9,38 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
+// 等待 apt 锁释放
+async function waitForAptLock(maxWaitSeconds: number = 60): Promise<void> {
+  const lockFiles = [
+    "/var/lib/dpkg/lock-frontend",
+    "/var/lib/dpkg/lock",
+    "/var/lib/apt/lists/lock",
+  ];
+
+  const startTime = Date.now();
+  while ((Date.now() - startTime) / 1000 < maxWaitSeconds) {
+    let locked = false;
+    for (const lockFile of lockFiles) {
+      try {
+        await execAsync(`sudo fuser ${lockFile} 2>/dev/null`);
+        locked = true;
+        break;
+      } catch {
+        // fuser 返回非零表示没有进程占用
+      }
+    }
+
+    if (!locked) {
+      return; // 锁已释放
+    }
+
+    console.log("Waiting for apt lock to be released...");
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+
+  throw new Error("Timeout waiting for apt lock");
+}
+
 // 包管理器类型
 type PackageManager = "apt" | "yum" | "dnf" | "pacman" | "apk";
 
@@ -194,6 +226,27 @@ export async function updatePackageCache(pm: PackageManager): Promise<{ success:
   };
 }
 
+// 添加 PHP PPA (用于 Ubuntu/Debian)
+async function addPhpPPA(): Promise<{ success: boolean; message: string }> {
+  try {
+    // 检查是否已添加
+    const { stdout } = await execAsync("ls /etc/apt/sources.list.d/ 2>/dev/null || true");
+    if (stdout.includes("ondrej") || stdout.includes("php")) {
+      return { success: true, message: "PHP PPA already added" };
+    }
+
+    // 添加 ondrej/php PPA
+    console.log("Adding ondrej/php PPA...");
+    await execAsync("sudo apt-get install -y software-properties-common");
+    await execAsync("sudo add-apt-repository -y ppa:ondrej/php");
+    await execAsync("sudo apt-get update");
+    return { success: true, message: "PHP PPA added successfully" };
+  } catch (error: any) {
+    console.log("Failed to add PHP PPA:", error.message);
+    return { success: false, message: error.message };
+  }
+}
+
 // 安装软件
 export async function installSoftware(
   softwareId: string,
@@ -208,6 +261,23 @@ export async function installSoftware(
   const packages = PACKAGE_MAP[softwareId]?.[pm];
   if (!packages || packages.length === 0) {
     return { success: false, message: `Software ${softwareId} not supported on this system`, logs: "" };
+  }
+
+  let logs = "";
+
+  // 等待 apt 锁释放 (apt/dpkg)
+  if (pm === "apt") {
+    try {
+      await waitForAptLock();
+    } catch (e: any) {
+      return { success: false, message: "apt 锁被占用，请稍后重试", logs: e.message };
+    }
+  }
+
+  // PHP 需要先添加 PPA (Ubuntu/Debian)
+  if (softwareId.startsWith("php") && pm === "apt") {
+    const ppaResult = await addPhpPPA();
+    logs += `PPA: ${ppaResult.message}\n`;
   }
 
   // 构建安装命令
@@ -305,6 +375,15 @@ export async function uninstallSoftware(
       await execAsync(`sudo systemctl disable ${serviceName}`);
     } catch (e) {
       console.log(`Note: Could not stop service ${serviceName}:`, e);
+    }
+  }
+
+  // 等待 apt 锁释放
+  if (pm === "apt") {
+    try {
+      await waitForAptLock();
+    } catch (e: any) {
+      return { success: false, message: "apt 锁被占用，请稍后重试", logs: e.message };
     }
   }
 
