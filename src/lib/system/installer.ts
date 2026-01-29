@@ -673,7 +673,7 @@ export async function installSoftware(
       timeout: 300000, // 5分钟超时
     });
 
-    const logs = stdout + "\n" + stderr;
+    let logs = stdout + "\n" + stderr;
 
     // 安装后启动服务
     const serviceMap: Record<string, string> = {
