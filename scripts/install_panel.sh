@@ -141,18 +141,23 @@ install_dependencies() {
             print_info "使用 yum/dnf 安装依赖..."
             if command -v dnf &>/dev/null; then
                 dnf install -y curl wget git tar gcc-c++ make
+                # ttyd 可能需要 EPEL
+                dnf install -y epel-release 2>/dev/null || true
+                dnf install -y ttyd 2>/dev/null || print_warning "ttyd 安装失败，Web终端功能可能不可用"
             else
                 yum install -y curl wget git tar gcc-c++ make
+                yum install -y epel-release 2>/dev/null || true
+                yum install -y ttyd 2>/dev/null || print_warning "ttyd 安装失败，Web终端功能可能不可用"
             fi
             ;;
         debian|ubuntu)
             print_info "使用 apt 安装依赖..."
             apt-get update
-            apt-get install -y curl wget git tar build-essential
+            apt-get install -y curl wget git tar build-essential ttyd
             ;;
         arch|manjaro)
             print_info "使用 pacman 安装依赖..."
-            pacman -Sy --noconfirm curl wget git tar base-devel
+            pacman -Sy --noconfirm curl wget git tar base-devel ttyd
             ;;
         *)
             print_error "不支持的操作系统: $OS"
