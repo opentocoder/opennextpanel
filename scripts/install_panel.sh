@@ -66,8 +66,12 @@ show_help() {
     echo "  -p, --port PORT     指定面板端口 (默认: 8888)"
     echo "  -d, --dir DIR       指定安装目录 (默认: /opt/openpanel)"
     echo "  -s, --skip-firewall 跳过防火墙配置"
-    echo "  --no-mysql          不安装 MySQL (可后续通过软件商店安装)"
     echo "  -y, --yes           自动确认所有提示"
+    echo ""
+    echo "数据库选项 (默认不安装，可后续通过软件商店安装):"
+    echo "  --with-mysql        安装 MySQL 8.0"
+    echo "  --with-mysql=5.7    安装 MySQL 5.7"
+    echo "  --with-mariadb      安装 MariaDB 10.x"
     echo ""
     echo "示例:"
     echo "  $0                  使用默认配置安装"
@@ -288,37 +292,75 @@ build_panel() {
     fi
 }
 
-# 安装和配置 MySQL
-install_mysql() {
-    print_step "安装和配置 MySQL"
+# 安装和配置数据库
+install_database() {
+    local db_name=""
+    case "$INSTALL_DB" in
+        mysql57) db_name="MySQL 5.7" ;;
+        mysql80) db_name="MySQL 8.0" ;;
+        mariadb) db_name="MariaDB" ;;
+    esac
+    print_step "安装和配置 $db_name"
 
-    # 检查 MySQL 是否已安装
+    # 检查 MySQL/MariaDB 是否已安装
     if command -v mysql &>/dev/null; then
-        print_info "MySQL 已安装"
+        print_info "MySQL/MariaDB 已安装"
     else
-        print_info "安装 MySQL..."
+        print_info "安装 $db_name..."
         case $OS in
             centos|rhel|fedora|rocky|almalinux)
-                if command -v dnf &>/dev/null; then
-                    dnf install -y mysql-server
+                if [ "$INSTALL_DB" = "mysql57" ]; then
+                    # MySQL 5.7 需要添加官方源
+                    rpm -Uvh https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm 2>/dev/null || true
+                    yum install -y mysql-community-server
+                elif [ "$INSTALL_DB" = "mysql80" ]; then
+                    if command -v dnf &>/dev/null; then
+                        dnf install -y mysql-server
+                    else
+                        yum install -y mysql-server
+                    fi
                 else
-                    yum install -y mysql-server
+                    # MariaDB
+                    if command -v dnf &>/dev/null; then
+                        dnf install -y mariadb-server
+                    else
+                        yum install -y mariadb-server
+                    fi
                 fi
-                systemctl start mysqld
-                systemctl enable mysqld
                 ;;
             debian|ubuntu)
-                DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
-                systemctl start mysql
-                systemctl enable mysql
+                if [ "$INSTALL_DB" = "mysql57" ]; then
+                    # MySQL 5.7 在新版 Ubuntu 需要添加源
+                    print_warning "Ubuntu 22.04+ 默认不支持 MySQL 5.7，将安装 MySQL 8.0"
+                    DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
+                elif [ "$INSTALL_DB" = "mysql80" ]; then
+                    DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
+                else
+                    # MariaDB
+                    DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server
+                fi
                 ;;
             arch|manjaro)
-                pacman -S --noconfirm mariadb
-                mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
-                systemctl start mariadb
-                systemctl enable mariadb
+                if [ "$INSTALL_DB" = "mariadb" ]; then
+                    pacman -S --noconfirm mariadb
+                    mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+                else
+                    # Arch 默认用 MariaDB，MySQL 需要 AUR
+                    print_warning "Arch Linux 推荐使用 MariaDB，将安装 MariaDB"
+                    pacman -S --noconfirm mariadb
+                    mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+                fi
                 ;;
         esac
+
+        # 启动服务
+        if [ "$INSTALL_DB" = "mariadb" ] || [ "$OS" = "arch" ] || [ "$OS" = "manjaro" ]; then
+            systemctl start mariadb
+            systemctl enable mariadb
+        else
+            systemctl start mysql 2>/dev/null || systemctl start mysqld
+            systemctl enable mysql 2>/dev/null || systemctl enable mysqld
+        fi
     fi
 
     # 生成 OpenPanel 专用 MySQL 用户密码
@@ -604,8 +646,20 @@ main() {
                 SKIP_FIREWALL="true"
                 shift
                 ;;
-            --no-mysql)
-                SKIP_MYSQL="true"
+            --with-mysql)
+                INSTALL_DB="mysql80"
+                shift
+                ;;
+            --with-mysql=5.7)
+                INSTALL_DB="mysql57"
+                shift
+                ;;
+            --with-mysql=8.0)
+                INSTALL_DB="mysql80"
+                shift
+                ;;
+            --with-mariadb)
+                INSTALL_DB="mariadb"
                 shift
                 ;;
             -y|--yes)
@@ -630,11 +684,20 @@ main() {
         echo -e "\n安装配置:"
         echo -e "  安装目录: ${CYAN}$INSTALL_DIR${NC}"
         echo -e "  面板端口: ${CYAN}$PANEL_PORT${NC}"
-        if [ "$SKIP_MYSQL" = "true" ]; then
-            echo -e "  MySQL:    ${YELLOW}不安装${NC}"
-        else
-            echo -e "  MySQL:    ${GREEN}安装${NC}"
-        fi
+        case "$INSTALL_DB" in
+            mysql57)
+                echo -e "  数据库:   ${GREEN}MySQL 5.7${NC}"
+                ;;
+            mysql80)
+                echo -e "  数据库:   ${GREEN}MySQL 8.0${NC}"
+                ;;
+            mariadb)
+                echo -e "  数据库:   ${GREEN}MariaDB${NC}"
+                ;;
+            *)
+                echo -e "  数据库:   ${YELLOW}不安装 (可通过软件商店安装)${NC}"
+                ;;
+        esac
         echo ""
         read -p "是否继续安装? [Y/n] " -n 1 -r
         echo
@@ -649,10 +712,10 @@ main() {
     download_panel
     install_panel_deps
     build_panel
-    if [ "$SKIP_MYSQL" != "true" ]; then
-        install_mysql
+    if [ -n "$INSTALL_DB" ]; then
+        install_database
     else
-        print_info "跳过 MySQL 安装 (可通过软件商店安装)"
+        print_info "跳过数据库安装 (可通过软件商店安装)"
         MYSQL_PANEL_USER=""
         MYSQL_PANEL_PASSWORD=""
     fi
