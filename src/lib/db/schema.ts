@@ -223,9 +223,20 @@ export function initDatabase() {
     ON monitor_history(created_at)
   `);
 
-  // 插入默认管理员 (使用固定密码 admin123)
+  // 插入默认管理员 (从环境变量读取密码，否则生成随机密码)
   const bcrypt = require("bcryptjs");
-  const defaultPassword = "admin123";
+  const crypto = require("crypto");
+
+  // 优先使用环境变量中的密码
+  let defaultPassword = process.env.ADMIN_PASSWORD;
+  let isRandomPassword = false;
+
+  if (!defaultPassword) {
+    // 生成随机密码
+    defaultPassword = crypto.randomBytes(12).toString("base64").replace(/[+/=]/g, "").substring(0, 16);
+    isRandomPassword = true;
+  }
+
   const hashedPassword = bcrypt.hashSync(defaultPassword, 10);
 
   const stmt = db.prepare(`
@@ -238,8 +249,12 @@ export function initDatabase() {
     console.log("\n========================================");
     console.log("  默认管理员账户已创建");
     console.log("  用户名: admin");
-    console.log("  密码: admin123");
-    console.log("  请立即登录并修改密码！");
+    if (isRandomPassword) {
+      console.log("  密码: " + defaultPassword);
+      console.log("  (随机生成，请立即修改！)");
+    } else {
+      console.log("  密码: (见 .env 文件)");
+    }
     console.log("========================================\n");
   }
 
