@@ -287,6 +287,58 @@ build_panel() {
     fi
 }
 
+# 安装和配置 MySQL
+install_mysql() {
+    print_step "安装和配置 MySQL"
+
+    # 检查 MySQL 是否已安装
+    if command -v mysql &>/dev/null; then
+        print_info "MySQL 已安装"
+    else
+        print_info "安装 MySQL..."
+        case $OS in
+            centos|rhel|fedora|rocky|almalinux)
+                if command -v dnf &>/dev/null; then
+                    dnf install -y mysql-server
+                else
+                    yum install -y mysql-server
+                fi
+                systemctl start mysqld
+                systemctl enable mysqld
+                ;;
+            debian|ubuntu)
+                DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
+                systemctl start mysql
+                systemctl enable mysql
+                ;;
+            arch|manjaro)
+                pacman -S --noconfirm mariadb
+                mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+                systemctl start mariadb
+                systemctl enable mariadb
+                ;;
+        esac
+    fi
+
+    # 生成 MySQL root 密码
+    MYSQL_ROOT_PASSWORD=$(generate_password 16)
+
+    # 配置 MySQL root 用户使用密码认证（Ubuntu 默认用 auth_socket）
+    print_info "配置 MySQL root 用户..."
+
+    # 尝试不同的方式设置密码
+    if mysql -u root -e "SELECT 1" &>/dev/null; then
+        # 可以无密码登录（auth_socket 或空密码）
+        mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_ROOT_PASSWORD}'; FLUSH PRIVILEGES;" 2>/dev/null || \
+        mysql -u root -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${MYSQL_ROOT_PASSWORD}'); FLUSH PRIVILEGES;" 2>/dev/null || \
+        mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}'; FLUSH PRIVILEGES;" 2>/dev/null
+        print_success "MySQL root 密码已设置"
+    else
+        print_warning "无法配置 MySQL，请手动设置"
+        MYSQL_ROOT_PASSWORD=""
+    fi
+}
+
 # 生成随机密码
 generate_password() {
     local length=${1:-16}
@@ -321,6 +373,9 @@ LOG_LEVEL=info
 
 # 运行环境
 NODE_ENV=production
+
+# MySQL 配置
+MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
 EOF
 
     chmod 600 "$INSTALL_DIR/.env"
@@ -467,6 +522,10 @@ show_result() {
     echo -e "管理员账号: ${YELLOW}admin${NC}"
     echo -e "管理员密码: ${YELLOW}${ADMIN_PASSWORD}${NC}"
     echo ""
+    if [ -n "$MYSQL_ROOT_PASSWORD" ]; then
+        echo -e "MySQL root 密码: ${YELLOW}${MYSQL_ROOT_PASSWORD}${NC}"
+        echo ""
+    fi
     echo -e "${RED}请立即登录并修改默认密码!${NC}"
     echo ""
     echo -e "常用命令:"
@@ -542,6 +601,7 @@ main() {
     download_panel
     install_panel_deps
     build_panel
+    install_mysql
     create_config
     create_service
     configure_firewall
