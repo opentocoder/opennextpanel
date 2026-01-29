@@ -198,6 +198,8 @@ install_nodejs() {
         debian|ubuntu)
             curl -fsSL https://deb.nodesource.com/setup_${MIN_NODE_VERSION}.x | bash -
             apt-get install -y nodejs
+            # 标记为手动安装，防止 autoremove 删除
+            apt-mark manual nodejs
             ;;
         arch|manjaro)
             pacman -S --noconfirm nodejs npm

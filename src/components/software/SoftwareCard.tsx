@@ -13,6 +13,7 @@ interface Software {
   status: "installed" | "running" | "stopped" | "not_installed";
   size?: string;
   homepage?: string;
+  systemRequired?: boolean;
 }
 
 interface SoftwareCardProps {
@@ -60,6 +61,8 @@ export function SoftwareCard({
                 className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
                   isRunning
                     ? "bg-green-100 text-green-700"
+                    : software.status === "installed"
+                    ? "bg-blue-100 text-blue-700"
                     : "bg-gray-100 text-gray-600"
                 }`}
               >
@@ -67,6 +70,8 @@ export function SoftwareCard({
                   <>
                     <Play size={10} /> 运行中
                   </>
+                ) : software.status === "installed" ? (
+                  "已安装"
                 ) : (
                   <>
                     <Square size={10} /> 已停止
@@ -88,26 +93,29 @@ export function SoftwareCard({
         <div className="flex items-center gap-1">
           {isInstalled ? (
             <>
-              {isRunning ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onStop(software)}
-                  className="text-orange-600 hover:text-orange-700"
-                >
-                  <Square size={14} className="mr-1" />
-                  停止
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onStart(software)}
-                  className="text-green-600 hover:text-green-700"
-                >
-                  <Play size={14} className="mr-1" />
-                  启动
-                </Button>
+              {/* 只有服务型软件才显示启动/停止按钮 */}
+              {software.status !== "installed" && (
+                isRunning ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onStop(software)}
+                    className="text-orange-600 hover:text-orange-700"
+                  >
+                    <Square size={14} className="mr-1" />
+                    停止
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onStart(software)}
+                    className="text-green-600 hover:text-green-700"
+                  >
+                    <Play size={14} className="mr-1" />
+                    启动
+                  </Button>
+                )
               )}
               <Button
                 size="sm"
@@ -116,14 +124,16 @@ export function SoftwareCard({
               >
                 <Settings size={14} />
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onUninstall(software)}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 size={14} />
-              </Button>
+              {!software.systemRequired && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onUninstall(software)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 size={14} />
+                </Button>
+              )}
             </>
           ) : (
             <Button

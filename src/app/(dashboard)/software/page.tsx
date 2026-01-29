@@ -15,6 +15,7 @@ interface Software {
   size?: string;
   homepage?: string;
   versions?: string[];
+  systemRequired?: boolean;  // 系统必需软件，不可卸载
 }
 
 // 软件元数据 (不含状态，状态从 API 获取)
@@ -165,10 +166,11 @@ const softwareMeta: Omit<Software, "status">[] = [
     id: "sqlite",
     name: "SQLite",
     version: "3.45.0",
-    description: "轻量级嵌入式数据库",
+    description: "轻量级嵌入式数据库（面板必需）",
     icon: "📄",
     category: "database",
     size: "2 MB",
+    systemRequired: true,  // 面板数据库使用
   },
   // 缓存
   {
@@ -195,13 +197,14 @@ const softwareMeta: Omit<Software, "status">[] = [
   {
     id: "nodejs",
     name: "Node.js",
-    version: "20.11.0",
-    versions: ["20.11.0", "18.19.0", "16.20.2"],
-    description: "基于 Chrome V8 的 JavaScript 运行时",
+    version: "22.0.0",
+    versions: ["22.x", "20.x", "18.x"],
+    description: "基于 Chrome V8 的 JavaScript 运行时（面板必需）",
     icon: "💚",
     category: "runtime",
     size: "35 MB",
     homepage: "https://nodejs.org",
+    systemRequired: true,  // 面板必需，不可卸载
   },
   {
     id: "python",

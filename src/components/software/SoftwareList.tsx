@@ -16,6 +16,7 @@ interface Software {
   status: "installed" | "running" | "stopped" | "not_installed";
   size?: string;
   homepage?: string;
+  systemRequired?: boolean;
 }
 
 interface SoftwareListProps {
