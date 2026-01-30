@@ -56,13 +56,11 @@ export async function createFTPUser(
       return { success: false, message: createUserResult.stderr };
     }
 
-    // 设置密码
-    const passwdResult = await executeCommand("chpasswd", [], { useSudo: true });
-    // 使用 echo 管道设置密码
-    const setPassResult = await executeCommand("bash", [
-      "-c",
-      `echo "${username}:${password}" | chpasswd`,
-    ]);
+    // 设置密码 - 使用 stdin 传递密码避免命令注入
+    const setPassResult = await executeCommand("chpasswd", [], {
+      useSudo: true,
+      stdin: `${username}:${password}`,
+    });
 
     if (setPassResult.code !== 0) {
       return { success: false, message: "Failed to set password" };
@@ -126,10 +124,11 @@ export async function changeFTPPassword(
   }
 
   try {
-    const result = await executeCommand("bash", [
-      "-c",
-      `echo "${username}:${newPassword}" | chpasswd`,
-    ]);
+    // 使用 stdin 传递密码避免命令注入
+    const result = await executeCommand("chpasswd", [], {
+      useSudo: true,
+      stdin: `${username}:${newPassword}`,
+    });
 
     if (result.code !== 0) {
       return { success: false, message: result.stderr };

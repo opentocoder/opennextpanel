@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exec, spawn } from "child_process";
 import { promisify } from "util";
+import { withAuth } from "@/lib/auth/middleware";
+import crypto from "crypto";
 
 const execAsync = promisify(exec);
+
+// 生成随机认证令牌用于 ttyd
+function generateTtydToken(): string {
+  return crypto.randomBytes(16).toString("hex");
+}
+
+// 存储 ttyd 认证令牌
+const ttydTokens = new Map<number, string>();
 
 // ttyd 会话管理
 interface TtydSession {
@@ -52,16 +62,26 @@ async function findAvailablePort(): Promise<number | null> {
 
 /**
  * 启动 ttyd 进程
+ * 安全措施：
+ * 1. 仅绑定 127.0.0.1（localhost），不对外暴露
+ * 2. 使用随机认证令牌
  */
-async function startTtyd(port: number): Promise<TtydSession | null> {
+async function startTtyd(port: number): Promise<(TtydSession & { token: string }) | null> {
   return new Promise((resolve) => {
     try {
+      // 生成认证令牌
+      const token = generateTtydToken();
+
       // 启动 ttyd
       // -W: 允许写入 (用户可以输入)
+      // -i: 绑定接口 (仅 localhost)
+      // -c: 认证凭据
       // -t: 终端选项
       // -p: 端口
       const ttydProcess = spawn("ttyd", [
         "-W",
+        "-i", "127.0.0.1",  // 安全：仅绑定 localhost
+        "-c", `panel:${token}`,  // 安全：需要认证
         "-p", String(port),
         "-t", "fontSize=14",
         "-t", "fontFamily=Monaco,Consolas,monospace",
@@ -81,9 +101,10 @@ async function startTtyd(port: number): Promise<TtydSession | null> {
       };
 
       sessions.set(port, session);
+      ttydTokens.set(port, token);
 
       // 等待一小段时间让 ttyd 启动
-      setTimeout(() => resolve(session), 500);
+      setTimeout(() => resolve({ ...session, token }), 500);
     } catch (error) {
       console.error("Failed to start ttyd:", error);
       resolve(null);
@@ -109,10 +130,12 @@ async function stopTtyd(port: number): Promise<boolean> {
   try {
     process.kill(session.pid, "SIGTERM");
     sessions.delete(port);
+    ttydTokens.delete(port);
     return true;
   } catch {
     // 进程可能已经退出
     sessions.delete(port);
+    ttydTokens.delete(port);
     return true;
   }
 }
@@ -164,7 +187,7 @@ async function getActiveSessions(): Promise<TtydSession[]> {
 }
 
 // GET: 获取状态
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const action = searchParams.get("action");
 
@@ -186,7 +209,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST: 创建新终端
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   try {
     const body = await req.json();
     const { action } = body;
@@ -220,6 +243,11 @@ export async function POST(req: NextRequest) {
         success: true,
         port: session.port,
         pid: session.pid,
+        // 返回认证信息供前端使用
+        auth: {
+          username: "panel",
+          password: session.token,
+        },
       });
     }
 
@@ -233,7 +261,7 @@ export async function POST(req: NextRequest) {
 }
 
 // DELETE: 关闭终端
-export async function DELETE(req: NextRequest) {
+async function handleDELETE(req: NextRequest) {
   try {
     const body = await req.json();
     const { port } = body;
@@ -254,3 +282,7 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+
+export const GET = withAuth(handleGET);
+export const POST = withAuth(handlePOST);
+export const DELETE = withAuth(handleDELETE);

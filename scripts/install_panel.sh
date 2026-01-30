@@ -427,6 +427,71 @@ generate_password() {
     tr -dc 'A-Za-z0-9!@#$%^&*' </dev/urandom | head -c "$length"
 }
 
+# 配置 Docker DNS (解决容器无法访问外网问题)
+configure_docker_dns() {
+    print_step "配置 Docker DNS"
+
+    # 检查 Docker 是否安装
+    if ! command -v docker &>/dev/null; then
+        print_info "Docker 未安装，跳过 DNS 配置"
+        return
+    fi
+
+    local docker_config="/etc/docker/daemon.json"
+    local config_changed=false
+
+    # 创建 /etc/docker 目录
+    mkdir -p /etc/docker
+
+    # 读取或创建配置
+    if [ -f "$docker_config" ]; then
+        # 检查是否已有 DNS 配置
+        if grep -q '"dns"' "$docker_config"; then
+            print_info "Docker DNS 已配置"
+            return
+        fi
+        # 添加 DNS 到现有配置
+        local tmp_config=$(mktemp)
+        # 使用 python 或 jq 添加 DNS (如果可用)
+        if command -v python3 &>/dev/null; then
+            python3 -c "
+import json
+with open('$docker_config', 'r') as f:
+    config = json.load(f)
+config['dns'] = ['8.8.8.8', '8.8.4.4', '1.1.1.1']
+with open('$tmp_config', 'w') as f:
+    json.dump(config, f, indent=2)
+"
+            mv "$tmp_config" "$docker_config"
+            config_changed=true
+        elif command -v jq &>/dev/null; then
+            jq '. + {"dns": ["8.8.8.8", "8.8.4.4", "1.1.1.1"]}' "$docker_config" > "$tmp_config"
+            mv "$tmp_config" "$docker_config"
+            config_changed=true
+        else
+            print_warning "无法修改现有 Docker 配置，请手动添加 DNS"
+        fi
+    else
+        # 创建新配置
+        cat > "$docker_config" << 'EOF'
+{
+  "dns": ["8.8.8.8", "8.8.4.4", "1.1.1.1"]
+}
+EOF
+        config_changed=true
+    fi
+
+    # 重启 Docker 应用配置
+    if [ "$config_changed" = true ]; then
+        if systemctl is-active --quiet docker; then
+            print_info "重启 Docker 以应用 DNS 配置..."
+            systemctl restart docker
+            sleep 3
+        fi
+        print_success "Docker DNS 配置完成"
+    fi
+}
+
 # 创建配置文件
 create_config() {
     print_step "创建配置文件"
@@ -729,6 +794,7 @@ main() {
     download_panel
     install_panel_deps
     build_panel
+    configure_docker_dns
     if [ -n "$INSTALL_DB" ]; then
         install_database
     else

@@ -4,6 +4,32 @@ import type { NextRequest } from "next/server";
 // 公开路由（不需要登录）
 const publicPaths = ["/login", "/api/auth/login", "/api/auth/logout"];
 
+/**
+ * 基本的 JWT 格式验证（Edge Runtime 兼容）
+ * 注意：这只验证格式，不验证签名。完整验证由 withAuth 中间件执行
+ */
+function isValidJWTFormat(token: string): boolean {
+  if (!token || typeof token !== "string") return false;
+
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+
+  try {
+    // 尝试解码 payload 部分
+    const payload = JSON.parse(atob(parts[1]));
+
+    // 检查必要字段
+    if (!payload.userId || !payload.username) return false;
+
+    // 检查是否过期
+    if (payload.exp && Date.now() >= payload.exp * 1000) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // 静态资源路径
 const staticPaths = ["/_next", "/favicon.ico", "/icons", "/images"];
 
@@ -61,6 +87,17 @@ export function middleware(request: NextRequest) {
     }
     // 否则重定向到登录页
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // 验证 JWT 格式（基本检查，完整签名验证由 withAuth 执行）
+  if (!isValidJWTFormat(token)) {
+    // 清除无效 token
+    const response = pathname.startsWith("/api/")
+      ? NextResponse.json({ error: "Token 无效" }, { status: 401 })
+      : NextResponse.redirect(new URL("/login", request.url));
+
+    response.cookies.delete("token");
+    return response;
   }
 
   return NextResponse.next();

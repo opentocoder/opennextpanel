@@ -17,6 +17,7 @@ interface Software {
   size?: string;
   homepage?: string;
   systemRequired?: boolean;
+  webUrl?: string;
 }
 
 interface SoftwareListProps {

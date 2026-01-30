@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withAuth } from "@/lib/auth/middleware";
 import {
   createTerminalSession,
   getTerminalSession,
@@ -10,7 +11,7 @@ import {
 } from "@/lib/system/terminal";
 
 // GET: 列出会话或获取统计信息
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const action = searchParams.get("action");
 
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST: 创建新会话或发送命令
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   try {
     const body = await req.json();
     const { action, sessionId, data, cols, rows, shell, cwd } = body;
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
 }
 
 // DELETE: 关闭会话
-export async function DELETE(req: NextRequest) {
+async function handleDELETE(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId");
 
@@ -111,3 +112,7 @@ export async function DELETE(req: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
+
+export const GET = withAuth(handleGET);
+export const POST = withAuth(handlePOST);
+export const DELETE = withAuth(handleDELETE);

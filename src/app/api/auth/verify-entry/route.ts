@@ -47,8 +47,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Failed to verify security entry:", error);
+    // 安全修复：出错时返回 verified: false（fail-close 而非 fail-open）
     return NextResponse.json(
-      { error: "验证失败", required: false, verified: true },
+      { error: "验证失败", required: true, verified: false },
       { status: 500 }
     );
   }

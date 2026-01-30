@@ -5,6 +5,56 @@ import * as path from "path";
 const NGINX_SITES_AVAILABLE = "/etc/nginx/sites-available";
 const NGINX_SITES_ENABLED = "/etc/nginx/sites-enabled";
 
+/**
+ * 验证域名格式（防止目录穿越和配置注入）
+ * 只允许合法的域名字符
+ */
+export function validateDomain(domain: string): { valid: boolean; error?: string } {
+  if (!domain || typeof domain !== "string") {
+    return { valid: false, error: "域名不能为空" };
+  }
+
+  // 域名长度限制
+  if (domain.length > 253) {
+    return { valid: false, error: "域名长度不能超过253个字符" };
+  }
+
+  // 严格的域名格式验证：只允许字母、数字、点和连字符
+  // 不允许 .. 或 / 或其他特殊字符
+  const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$/;
+
+  if (!domainRegex.test(domain)) {
+    return { valid: false, error: "域名格式无效，只允许字母、数字、点和连字符" };
+  }
+
+  // 额外检查：不允许包含路径分隔符或特殊字符
+  if (domain.includes("/") || domain.includes("\\") || domain.includes("..")) {
+    return { valid: false, error: "域名不能包含路径字符" };
+  }
+
+  // 检查每个标签长度
+  const labels = domain.split(".");
+  for (const label of labels) {
+    if (label.length > 63) {
+      return { valid: false, error: "域名标签长度不能超过63个字符" };
+    }
+  }
+
+  return { valid: true };
+}
+
+/**
+ * 获取站点配置文件路径
+ */
+export function getSiteConfigPath(siteName: string): string {
+  // 安全检查：验证域名格式
+  const validation = validateDomain(siteName);
+  if (!validation.valid) {
+    throw new Error(validation.error);
+  }
+  return path.join(NGINX_SITES_AVAILABLE, `${siteName}.conf`);
+}
+
 export type SiteType = "php" | "static" | "proxy" | "nodejs";
 
 export interface NginxSiteConfig {
@@ -275,6 +325,12 @@ export function generateNginxConfig(config: NginxSiteConfig): string {
  * 创建站点配置文件
  */
 export async function createSiteConfig(config: NginxSiteConfig): Promise<void> {
+  // 安全检查：验证域名格式
+  const validation = validateDomain(config.domain);
+  if (!validation.valid) {
+    throw new Error(`域名验证失败: ${validation.error}`);
+  }
+
   const configContent = generateNginxConfig(config);
   const configPath = path.join(NGINX_SITES_AVAILABLE, `${config.domain}.conf`);
 
@@ -286,6 +342,12 @@ export async function createSiteConfig(config: NginxSiteConfig): Promise<void> {
  * 启用站点
  */
 export async function enableSite(domain: string): Promise<void> {
+  // 安全检查：验证域名格式
+  const validation = validateDomain(domain);
+  if (!validation.valid) {
+    throw new Error(`域名验证失败: ${validation.error}`);
+  }
+
   const availablePath = path.join(NGINX_SITES_AVAILABLE, `${domain}.conf`);
   const enabledPath = path.join(NGINX_SITES_ENABLED, `${domain}.conf`);
 
@@ -297,6 +359,12 @@ export async function enableSite(domain: string): Promise<void> {
  * 禁用站点
  */
 export async function disableSite(domain: string): Promise<void> {
+  // 安全检查：验证域名格式
+  const validation = validateDomain(domain);
+  if (!validation.valid) {
+    throw new Error(`域名验证失败: ${validation.error}`);
+  }
+
   // 删除所有可能的符号链接格式（有.conf和无.conf）
   const enabledPathConf = path.join(NGINX_SITES_ENABLED, `${domain}.conf`);
   const enabledPathNoConf = path.join(NGINX_SITES_ENABLED, domain);
@@ -307,6 +375,12 @@ export async function disableSite(domain: string): Promise<void> {
  * 删除站点配置
  */
 export async function deleteSiteConfig(domain: string): Promise<void> {
+  // 安全检查：验证域名格式
+  const validation = validateDomain(domain);
+  if (!validation.valid) {
+    throw new Error(`域名验证失败: ${validation.error}`);
+  }
+
   await disableSite(domain);
   // 删除所有可能的配置文件格式（有.conf和无.conf）
   const availablePathConf = path.join(NGINX_SITES_AVAILABLE, `${domain}.conf`);

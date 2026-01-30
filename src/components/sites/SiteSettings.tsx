@@ -33,6 +33,7 @@ const settingTabs = [
   { id: "proxy", label: "反向代理" },
   { id: "hotlink", label: "防盗链" },
   { id: "logs", label: "网站日志" },
+  { id: "config", label: "配置文件" },
 ];
 
 export function SiteSettings({ open, onOpenChange, site }: SiteSettingsProps) {
@@ -80,10 +81,19 @@ export function SiteSettings({ open, onOpenChange, site }: SiteSettingsProps) {
   const [sslKey, setSslKey] = useState("");
   const [sslEnabled, setSslEnabled] = useState(false);
 
+  // 配置文件
+  const [nginxConfig, setNginxConfig] = useState("");
+  const [configPath, setConfigPath] = useState("");
+  const [configLoading, setConfigLoading] = useState(false);
+
   useEffect(() => {
     if (site && open) {
+      // 重置所有状态
       setDomains(site.domain || "");
       setPhpVersion(site.phpVersion || "static");
+      setActiveTab("domain");
+      setNginxConfig("");
+      setConfigPath("");
       fetchSiteConfig();
     }
   }, [site, open]);
@@ -124,6 +134,53 @@ export function SiteSettings({ open, onOpenChange, site }: SiteSettingsProps) {
       }
     } catch (error) {
       console.error("Failed to fetch logs:", error);
+    }
+  };
+
+  const fetchNginxConfig = async () => {
+    if (!site) return;
+    setConfigLoading(true);
+    try {
+      const res = await fetch(`/api/sites/${site.id}?action=nginx_config`);
+      const data = await res.json();
+      if (data.error) {
+        setNginxConfig(`# 错误: ${data.error}`);
+        setConfigPath(`/etc/nginx/sites-available/${site.name}.conf`);
+      } else if (data.config) {
+        setNginxConfig(data.config);
+        setConfigPath(data.path || `/etc/nginx/sites-available/${site.name}.conf`);
+      } else {
+        setNginxConfig("# 配置文件为空或不存在");
+        setConfigPath(`/etc/nginx/sites-available/${site.name}.conf`);
+      }
+    } catch (error) {
+      console.error("Failed to fetch nginx config:", error);
+      setNginxConfig(`# 获取配置失败: ${error}`);
+    } finally {
+      setConfigLoading(false);
+    }
+  };
+
+  const saveNginxConfig = async () => {
+    if (!site) return;
+    setConfigLoading(true);
+    try {
+      const res = await fetch(`/api/sites/${site.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "save_nginx_config", config: nginxConfig }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("配置保存成功，Nginx 已重载");
+      } else {
+        alert("保存失败: " + (data.error || "未知错误"));
+      }
+    } catch (error) {
+      console.error("Failed to save nginx config:", error);
+      alert("保存失败");
+    } finally {
+      setConfigLoading(false);
     }
   };
 
@@ -267,6 +324,7 @@ export function SiteSettings({ open, onOpenChange, site }: SiteSettingsProps) {
                   onClick={() => {
                     setActiveTab(tab.id);
                     if (tab.id === "logs") fetchLogs("access");
+                    if (tab.id === "config") fetchNginxConfig();
                   }}
                 >
                   {tab.label}
@@ -706,6 +764,52 @@ export function SiteSettings({ open, onOpenChange, site }: SiteSettingsProps) {
                   <Button variant="outline" onClick={() => fetchLogs(logsTab)}>刷新</Button>
                   <Button variant="outline">下载日志</Button>
                   <Button variant="destructive">清空日志</Button>
+                </div>
+              </div>
+            )}
+
+            {/* 配置文件 */}
+            {activeTab === "config" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium">Nginx 配置文件</h3>
+                    <p className="text-xs text-gray-500 font-mono">{configPath}</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={fetchNginxConfig} disabled={configLoading}>
+                    刷新
+                  </Button>
+                </div>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-xs text-yellow-700">
+                    <strong>注意：</strong>直接编辑配置文件可能导致网站无法访问。修改前请确保语法正确。
+                  </p>
+                </div>
+                <textarea
+                  className="w-full h-80 p-3 border rounded-lg text-sm font-mono bg-gray-900 text-green-400"
+                  value={nginxConfig}
+                  onChange={(e) => setNginxConfig(e.target.value)}
+                  placeholder={configLoading ? "加载中..." : "# Nginx 配置文件内容"}
+                  spellCheck={false}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={saveNginxConfig}
+                    disabled={configLoading}
+                  >
+                    {configLoading ? "保存中..." : "保存配置"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (confirm("确定要重置配置吗？未保存的修改将丢失。")) {
+                        fetchNginxConfig();
+                      }
+                    }}
+                  >
+                    重置
+                  </Button>
                 </div>
               </div>
             )}

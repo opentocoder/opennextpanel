@@ -231,7 +231,7 @@ export default function LoginPage() {
             </Button>
           </form>
           <div className="mt-6 text-center text-xs text-muted-foreground">
-            <p>默认账号: admin / admin123</p>
+            <p>首次安装请查看启动日志获取初始密码</p>
           </div>
         </CardContent>
       </Card>

@@ -265,6 +265,47 @@ export async function removeImage(imageId: string, force = false): Promise<void>
 }
 
 /**
+ * Configure Docker daemon with DNS settings
+ * This ensures containers can resolve external domains
+ */
+export async function configureDockerDNS(): Promise<{ success: boolean; message: string }> {
+  try {
+    const fs = require("fs").promises;
+    const { execFile } = require("child_process");
+    const { promisify } = require("util");
+    const execFileAsync = promisify(execFile);
+    const path = "/etc/docker/daemon.json";
+
+    let config: any = {};
+
+    // Read existing config if exists
+    try {
+      const existing = await fs.readFile(path, "utf-8");
+      config = JSON.parse(existing);
+    } catch {
+      // File doesn't exist, start with empty config
+    }
+
+    // Add DNS configuration if not already set
+    if (!config.dns || !Array.isArray(config.dns) || config.dns.length === 0) {
+      config.dns = ["8.8.8.8", "8.8.4.4", "1.1.1.1"];
+
+      await fs.writeFile(path, JSON.stringify(config, null, 2));
+
+      // Restart Docker to apply changes using execFile (safer than exec)
+      await execFileAsync("systemctl", ["restart", "docker"], { timeout: 30000 });
+
+      return { success: true, message: "Docker DNS configured and service restarted" };
+    }
+
+    return { success: true, message: "Docker DNS already configured" };
+  } catch (error) {
+    console.error("Failed to configure Docker DNS:", error);
+    return { success: false, message: `Failed to configure Docker DNS: ${error}` };
+  }
+}
+
+/**
  * Ensure the OpenPanel shared network exists
  */
 export async function ensureNetwork(): Promise<string> {
@@ -279,11 +320,14 @@ export async function ensureNetwork(): Promise<string> {
       return existingNetwork.Id!;
     }
 
-    // Create the network
+    // Create the network with DNS options
     const network = await docker.createNetwork({
       Name: OPENPANEL_NETWORK,
       Driver: "bridge",
       CheckDuplicate: true,
+      Options: {
+        "com.docker.network.bridge.enable_ip_masquerade": "true",
+      },
     });
 
     console.log(`Created Docker network: ${OPENPANEL_NETWORK}`);
@@ -380,5 +424,6 @@ export default {
   createContainer,
   isDockerAvailable,
   ensureNetwork,
+  configureDockerDNS,
   OPENPANEL_NETWORK,
 };

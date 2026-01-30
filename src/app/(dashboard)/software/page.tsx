@@ -16,6 +16,7 @@ interface Software {
   homepage?: string;
   versions?: string[];
   systemRequired?: boolean;  // 系统必需软件，不可卸载
+  webUrl?: string;  // Web 访问地址
 }
 
 // 软件元数据 (不含状态，状态从 API 获取)
@@ -296,6 +297,7 @@ const softwareMeta: Omit<Software, "status">[] = [
     category: "tools",
     size: "15 MB",
     homepage: "https://phpmyadmin.net",
+    webUrl: ":8082",
   },
   {
     id: "adminer",
@@ -305,6 +307,7 @@ const softwareMeta: Omit<Software, "status">[] = [
     icon: "📋",
     category: "tools",
     size: "500 KB",
+    webUrl: ":8083",  // 访问端口
   },
   {
     id: "pureftpd",

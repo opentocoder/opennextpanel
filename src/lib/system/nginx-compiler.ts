@@ -806,11 +806,15 @@ tar xzf nginx-\${NGINX_VERSION}.tar.gz
 log_info "下载第三方模块..."
 cd \${MODULES_DIR}
 
-${thirdPartyModules.map(m => `
-# ${m.name}
+${thirdPartyModules.map(m => {
+    // 从 repo URL 提取目录名，例如 https://github.com/openresty/headers-more-nginx-module.git -> headers-more-nginx-module
+    const repoDir = m.repo!.split('/').pop()?.replace('.git', '') || m.id;
+    return `
+# ${m.name} (${repoDir})
 log_info "下载 ${m.name}..."
-git clone ${m.submodules ? '--recursive' : ''} ${m.repo} ${m.id}${m.branch ? ` -b ${m.branch}` : ''}
-`).join('')}
+git clone ${m.submodules ? '--recursive' : ''} ${m.repo} ${repoDir}${m.branch ? ` -b ${m.branch}` : ''}
+`;
+  }).join('')}
 
 ${options.customModules.map((url, i) => `
 # 自定义模块 ${i + 1}

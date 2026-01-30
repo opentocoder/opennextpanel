@@ -104,13 +104,13 @@ const SUPPORTED_SERVICES = [
   // 数据库
   {
     id: "mysql",
-    name: "MySQL/MariaDB",
+    name: "MySQL",
     serviceName: "mysql",
-    altServiceNames: ["mariadb", "mysqld"],
-    versionCmd: ["mysql", "--version"],
+    altServiceNames: ["mysqld"],  // 不包含 mariadb，避免混淆
+    versionCmd: ["mysqld", "--version"],  // 用 mysqld 而不是 mysql 客户端
     category: "database",
     icon: "mysql",
-    description: "关系型数据库管理系统",
+    description: "开源关系型数据库管理系统",
   },
   {
     id: "postgresql",
@@ -406,12 +406,12 @@ const SUPPORTED_SERVICES = [
     id: "mariadb",
     name: "MariaDB",
     serviceName: "mariadb",
-    altServiceNames: ["mysql"],
-    versionCmd: ["mariadb", "--version"],
-    altVersionCmd: ["mysql", "--version"],
+    altServiceNames: [],  // 不包含 mysql，避免混淆
+    versionCmd: ["mariadbd", "--version"],  // 用服务端命令检测
+    altVersionCmd: ["mariadb", "--version"],
     category: "database",
     icon: "mariadb",
-    description: "MySQL 的开源分支",
+    description: "MySQL 的开源分支，完全兼容",
   },
 ];
 
@@ -493,6 +493,31 @@ async function checkServiceInstalled(serviceDef: (typeof SUPPORTED_SERVICES)[0])
         return result.code === 0 && result.stdout.includes(serviceDef.serviceName);
       }
     }
+    return false;
+  }
+
+  // 对于有 systemd 服务的软件，必须检查服务单元是否真正存在（不只是命令）
+  // 这样可以避免：命令存在但服务被删除导致无法启动/停止的问题
+  if (serviceDef.serviceName) {
+    const serviceNames = [serviceDef.serviceName, ...(serviceDef.altServiceNames || [])];
+
+    for (const name of serviceNames) {
+      // 检查服务单元文件是否存在且可用
+      const result = await executeCommand("systemctl", ["list-unit-files", `${name}.service`], {
+        useSudo: false,
+      });
+
+      // 必须找到服务且不是 alias（alias 说明指向其他服务）
+      if (result.code === 0 &&
+          result.stdout.includes(`${name}.service`) &&
+          !result.stdout.includes("0 unit files") &&
+          !result.stdout.includes("alias")) {
+        return true;
+      }
+    }
+
+    // 如果有服务名定义但找不到任何服务单元，认为未安装
+    // 即使命令存在也不算安装（可能只是残留的核心文件）
     return false;
   }
 

@@ -44,6 +44,24 @@ export async function createConnection(
   });
 }
 
+// 允许的字符集白名单
+const ALLOWED_CHARSETS = new Set([
+  "utf8", "utf8mb4", "utf8mb3", "latin1", "ascii", "binary",
+  "gbk", "gb2312", "big5", "euckr", "eucjpms", "cp932",
+]);
+
+// 允许的排序规则白名单（常用的）
+const ALLOWED_COLLATIONS = new Set([
+  "utf8mb4_unicode_ci", "utf8mb4_general_ci", "utf8mb4_bin", "utf8mb4_0900_ai_ci",
+  "utf8_unicode_ci", "utf8_general_ci", "utf8_bin",
+  "latin1_swedish_ci", "latin1_general_ci", "latin1_bin",
+  "ascii_general_ci", "ascii_bin",
+  "binary",
+  "gbk_chinese_ci", "gbk_bin",
+  "gb2312_chinese_ci",
+  "big5_chinese_ci",
+]);
+
 /**
  * 创建数据库
  */
@@ -55,6 +73,16 @@ export async function createDatabase(
   // 验证数据库名（防止 SQL 注入）
   if (!/^[a-zA-Z0-9_]+$/.test(dbName)) {
     throw new Error("Invalid database name");
+  }
+
+  // 验证字符集（防止注入）
+  if (!ALLOWED_CHARSETS.has(charset.toLowerCase())) {
+    throw new Error(`Invalid charset: ${charset}. Allowed: ${Array.from(ALLOWED_CHARSETS).join(", ")}`);
+  }
+
+  // 验证排序规则（防止注入）
+  if (!ALLOWED_COLLATIONS.has(collation.toLowerCase())) {
+    throw new Error(`Invalid collation: ${collation}. Please use a standard collation.`);
   }
 
   const conn = await createConnection();

@@ -62,6 +62,8 @@ const ALLOWED_COMMANDS = new Set([
   "memcached",
   "vsftpd",
   "bash",
+  "reboot",
+  "shutdown",
 ]);
 
 // 需要 sudo 权限的命令
@@ -73,9 +75,12 @@ const SUDO_COMMANDS = new Set([
   "userdel",
   "usermod",
   "passwd",
+  "chpasswd",
   "service",
   "chmod",
   "chown",
+  "reboot",
+  "shutdown",
 ]);
 
 export interface ExecResult {
@@ -89,6 +94,7 @@ export interface ExecOptions {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   useSudo?: boolean;
+  stdin?: string;  // 通过 stdin 传递数据（安全方式传递敏感数据）
 }
 
 /**
@@ -105,7 +111,7 @@ export async function executeCommand(
     throw new Error(`Command not allowed: ${command}`);
   }
 
-  const { timeout = 30000, cwd, env, useSudo } = options;
+  const { timeout = 30000, cwd, env, useSudo, stdin } = options;
 
   // 确定是否需要 sudo
   const needsSudo = useSudo !== false && SUDO_COMMANDS.has(command);
@@ -116,6 +122,47 @@ export async function executeCommand(
   if (needsSudo) {
     actualCommand = "sudo";
     actualArgs = [command, ...args];
+  }
+
+  // 如果有 stdin 数据，使用 spawn 以便写入 stdin
+  if (stdin !== undefined) {
+    return new Promise((resolve) => {
+      const proc = spawn(actualCommand, actualArgs, {
+        cwd,
+        env: { ...process.env, ...env },
+      });
+
+      let stdout = "";
+      let stderr = "";
+
+      proc.stdout?.on("data", (data) => {
+        stdout += data.toString();
+      });
+
+      proc.stderr?.on("data", (data) => {
+        stderr += data.toString();
+      });
+
+      proc.on("close", (code) => {
+        resolve({ stdout, stderr, code });
+      });
+
+      proc.on("error", (error) => {
+        resolve({ stdout, stderr: error.message, code: 1 });
+      });
+
+      // 写入 stdin 并关闭
+      if (proc.stdin) {
+        proc.stdin.write(stdin);
+        proc.stdin.end();
+      }
+
+      // 超时处理
+      setTimeout(() => {
+        proc.kill("SIGTERM");
+        resolve({ stdout, stderr: "Command timed out", code: -1 });
+      }, timeout);
+    });
   }
 
   try {

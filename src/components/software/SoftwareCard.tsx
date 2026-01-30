@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Download, Settings, Trash2, Play, Square, ExternalLink } from "lucide-react";
+import { Download, Settings, Trash2, Play, Square, ExternalLink, Globe } from "lucide-react";
 
 interface Software {
   id: string;
@@ -14,6 +14,7 @@ interface Software {
   size?: string;
   homepage?: string;
   systemRequired?: boolean;
+  webUrl?: string;  // Web 访问地址，如 ":8082" 表示当前主机的 8082 端口
 }
 
 interface SoftwareCardProps {
@@ -93,6 +94,23 @@ export function SoftwareCard({
         <div className="flex items-center gap-1">
           {isInstalled ? (
             <>
+              {/* Web 访问按钮 */}
+              {software.webUrl && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const url = software.webUrl!.startsWith(":")
+                      ? `${window.location.protocol}//${window.location.hostname}${software.webUrl}`
+                      : software.webUrl;
+                    window.open(url, "_blank");
+                  }}
+                  className="text-blue-600 hover:text-blue-700"
+                >
+                  <Globe size={14} className="mr-1" />
+                  打开
+                </Button>
+              )}
               {/* 只有服务型软件才显示启动/停止按钮 */}
               {software.status !== "installed" && (
                 isRunning ? (

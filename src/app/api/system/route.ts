@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/auth/middleware";
 import {
   getCPUInfo,
   getMemoryInfo,
@@ -9,7 +10,7 @@ import {
   getConnectionStats,
 } from "@/lib/system/info";
 
-export async function GET() {
+async function handleGET() {
   try {
     // 并行获取所有系统信息
     const [cpuInfo, memoryInfo, diskInfo, networkInfo, systemInfo, processes, connections] =
@@ -100,3 +101,5 @@ export async function GET() {
     return NextResponse.json({ error: "获取系统信息失败" }, { status: 500 });
   }
 }
+
+export const GET = withAuth(handleGET);

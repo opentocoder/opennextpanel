@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/auth/middleware";
+import { withAdmin } from "@/lib/auth/middleware";
 import { executeCommand } from "@/lib/system/executor";
 
 // POST: 系统控制操作（重启面板、重启服务器等）
@@ -88,4 +88,4 @@ async function handlePOST(request: NextRequest) {
   }
 }
 
-export const POST = withAuth(handlePOST);
+export const POST = withAdmin(handlePOST);

@@ -34,9 +34,6 @@ export function Header({ systemInfo, user }: HeaderProps) {
         </div>
         <span className="text-xs text-gray-400">|</span>
         <span className="text-sm text-gray-500">{systemInfo?.os || "Linux"}</span>
-        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">
-          企业版
-        </span>
       </div>
 
       {/* Right side */}

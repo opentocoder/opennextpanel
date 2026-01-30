@@ -20,13 +20,21 @@ import {
 // 服务名映射
 const SERVICE_MAP: Record<string, string[]> = {
   nginx: ["nginx"],
-  "php-fpm": ["php-fpm", "php8.2-fpm", "php8.1-fpm", "php8.0-fpm", "php7.4-fpm"],
-  mysql: ["mysql", "mariadb", "mysqld"],
+  apache: ["apache2", "httpd"],  // Ubuntu 用 apache2, CentOS 用 httpd
+  "php-fpm": ["php-fpm", "php8.3-fpm", "php8.2-fpm", "php8.1-fpm", "php8.0-fpm", "php7.4-fpm"],
+  php83: ["php8.3-fpm"],
+  php82: ["php8.2-fpm"],
+  php81: ["php8.1-fpm"],
+  php74: ["php7.4-fpm"],
+  mysql: ["mysqld"],  // 真正的 MySQL 服务
+  mariadb: ["mariadb"],  // MariaDB 服务
   redis: ["redis", "redis-server"],
   docker: ["docker"],
   postgresql: ["postgresql"],
   mongodb: ["mongod"],
   memcached: ["memcached"],
+  fail2ban: ["fail2ban"],
+  supervisor: ["supervisor", "supervisord"],
 };
 
 // 获取实际运行的服务名
