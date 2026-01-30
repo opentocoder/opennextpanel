@@ -11,12 +11,12 @@ async function handlePOST(request: NextRequest) {
     switch (action) {
       case "restart_panel": {
         // 重启面板服务
-        console.log("Restarting OpenPanel service...");
+        console.log("Restarting OpenNextPanel service...");
 
         // 异步执行重启，不等待结果（因为重启后连接会断开）
         setTimeout(async () => {
           try {
-            await executeCommand("systemctl", ["restart", "openpanel"], {
+            await executeCommand("systemctl", ["restart", "opennextpanel"], {
               useSudo: true,
               timeout: 30000,
             });

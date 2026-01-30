@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# OpenPanel 卸载脚本
-# 完全移除 OpenPanel 及其相关配置
+# OpenNextPanel 卸载脚本
+# 完全移除 OpenNextPanel 及其相关配置
 #
 
 set -e
@@ -15,8 +15,8 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # 配置
-INSTALL_DIR="/opt/openpanel"
-SERVICE_NAME="openpanel"
+INSTALL_DIR="/opt/opennextpanel"
+SERVICE_NAME="opennextpanel"
 DEFAULT_PORT=8888
 
 # 打印函数
@@ -50,7 +50,7 @@ show_banner() {
     echo " \___/| .__/ \___|_| |_|_|   \__,_|_| |_|\___|_|"
     echo "      |_|                                       "
     echo -e "${NC}"
-    echo -e "OpenPanel 卸载脚本"
+    echo -e "OpenNextPanel 卸载脚本"
     echo -e "==================\n"
 }
 
@@ -60,7 +60,7 @@ show_help() {
     echo ""
     echo "选项:"
     echo "  -h, --help          显示此帮助信息"
-    echo "  -d, --dir DIR       指定安装目录 (默认: /opt/openpanel)"
+    echo "  -d, --dir DIR       指定安装目录 (默认: /opt/opennextpanel)"
     echo "  -k, --keep-data     保留数据目录"
     echo "  -y, --yes           自动确认所有提示"
     echo ""
@@ -175,7 +175,7 @@ cleanup_firewall() {
 backup_data() {
     print_step "备份数据"
 
-    local backup_dir="/root/openpanel-backup-$(date +%Y%m%d_%H%M%S)"
+    local backup_dir="/root/opennextpanel-backup-$(date +%Y%m%d_%H%M%S)"
 
     if [ -d "$INSTALL_DIR/data" ]; then
         print_info "备份数据目录到 $backup_dir..."
@@ -223,8 +223,8 @@ cleanup_logs() {
     fi
 
     # 清理应用日志
-    if [ -d "/var/log/openpanel" ]; then
-        rm -rf "/var/log/openpanel"
+    if [ -d "/var/log/opennextpanel" ]; then
+        rm -rf "/var/log/opennextpanel"
         print_info "应用日志已清理"
     fi
 
@@ -235,7 +235,7 @@ cleanup_logs() {
 show_result() {
     echo ""
     echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}    OpenPanel 卸载完成!${NC}"
+    echo -e "${GREEN}    OpenNextPanel 卸载完成!${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
 
@@ -250,7 +250,7 @@ show_result() {
         echo ""
     fi
 
-    echo -e "感谢使用 OpenPanel!"
+    echo -e "感谢使用 OpenNextPanel!"
     echo ""
 }
 
@@ -293,13 +293,13 @@ main() {
 
     # 检查是否已安装
     if [ ! -d "$INSTALL_DIR" ] && [ ! -f "/etc/systemd/system/${SERVICE_NAME}.service" ]; then
-        print_warning "OpenPanel 似乎未安装"
+        print_warning "OpenNextPanel 似乎未安装"
         exit 0
     fi
 
     # 确认卸载
     if [ "$AUTO_YES" != "true" ]; then
-        echo -e "${RED}警告: 此操作将卸载 OpenPanel!${NC}"
+        echo -e "${RED}警告: 此操作将卸载 OpenNextPanel!${NC}"
         echo ""
         echo -e "安装目录: ${CYAN}$INSTALL_DIR${NC}"
         if [ "$KEEP_DATA" = "true" ]; then

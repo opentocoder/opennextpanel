@@ -23,17 +23,17 @@ A: 最低配置：
 ### Q: 安装失败怎么办？
 A: 检查以下内容：
 1. 确保系统为全新安装，没有其他面板
-2. 查看安装日志：`/var/log/openpanel-install.log`
+2. 查看安装日志：`/var/log/opennextpanel-install.log`
 3. 确保网络正常，能访问软件源
 4. 确保使用 root 用户或 sudo 权限
 
 ### Q: 如何更新面板？
 A: 执行以下命令：
 ```bash
-cd /opt/openpanel
+cd /opt/opennextpanel
 git pull
 npm run build
-sudo systemctl restart openpanel
+sudo systemctl restart opennextpanel
 ```
 
 ---
@@ -43,7 +43,7 @@ sudo systemctl restart openpanel
 ### Q: 忘记管理员密码怎么办？
 A: 通过 SSH 登录服务器，执行：
 ```bash
-cd /opt/openpanel
+cd /opt/opennextpanel
 node -e "
 const bcrypt = require('bcryptjs');
 const Database = require('better-sqlite3');
@@ -57,10 +57,10 @@ console.log('密码已重置为: admin123');
 
 ### Q: 面板无法访问？
 A: 排查步骤：
-1. 检查服务状态：`systemctl status openpanel`
+1. 检查服务状态：`systemctl status opennextpanel`
 2. 检查端口监听：`ss -tlnp | grep 8888`
 3. 检查防火墙：`ufw status` 或 `firewall-cmd --list-all`
-4. 查看日志：`journalctl -u openpanel -f`
+4. 查看日志：`journalctl -u opennextpanel -f`
 
 ### Q: 安全入口是什么？
 A: 安全入口是面板访问的特殊路径，设置后必须通过 `http://IP:8888/安全入口` 才能访问面板，可以防止面板被扫描发现。
@@ -121,9 +121,9 @@ A: 检查：
 3. 用户是否有访问权限
 
 ### Q: 如何查看数据库密码？
-A: 面板自动生成的数据库凭据保存在 `/opt/openpanel/.env` 文件中：
+A: 面板自动生成的数据库凭据保存在 `/opt/opennextpanel/.env` 文件中：
 ```bash
-cat /opt/openpanel/.env | grep MYSQL
+cat /opt/opennextpanel/.env | grep MYSQL
 ```
 
 ### Q: phpMyAdmin 无法登录？
@@ -230,7 +230,7 @@ A: 需要备份：
 
 ### Q: 如何迁移到新服务器？
 A: 步骤：
-1. 新服务器安装 OpenPanel
+1. 新服务器安装 OpenNextPanel
 2. 复制网站文件
 3. 导入数据库
 4. 恢复 Nginx 配置
@@ -262,17 +262,17 @@ gzip_min_length 1000;
 
 ### Q: 面板日志在哪里？
 A:
-- 面板日志：`journalctl -u openpanel`
+- 面板日志：`journalctl -u opennextpanel`
 - Nginx 日志：`/var/log/nginx/`
 - PHP 日志：`/var/log/php8.x-fpm.log`
 
 ### Q: 如何卸载面板？
 A:
 ```bash
-systemctl stop openpanel
-systemctl disable openpanel
-rm -rf /opt/openpanel
-rm /etc/systemd/system/openpanel.service
+systemctl stop opennextpanel
+systemctl disable opennextpanel
+rm -rf /opt/opennextpanel
+rm /etc/systemd/system/opennextpanel.service
 systemctl daemon-reload
 ```
 
@@ -281,4 +281,4 @@ A: 不建议。多个面板可能造成端口冲突、配置冲突等问题。
 
 ---
 
-*还有其他问题？请提交 [Issue](https://github.com/opentocoder/openpanel/issues)*
+*还有其他问题？请提交 [Issue](https://github.com/opentocoder/opennextpanel/issues)*

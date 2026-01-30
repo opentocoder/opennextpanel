@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# OpenPanel 更新脚本
+# OpenNextPanel 更新脚本
 # 备份配置、拉取最新代码、重建并重启
 #
 
@@ -15,9 +15,9 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # 配置
-INSTALL_DIR="/opt/openpanel"
-SERVICE_NAME="openpanel"
-BACKUP_DIR="/root/openpanel-backups"
+INSTALL_DIR="/opt/opennextpanel"
+SERVICE_NAME="opennextpanel"
+BACKUP_DIR="/root/opennextpanel-backups"
 MAX_BACKUPS=5
 
 # 打印函数
@@ -51,7 +51,7 @@ show_banner() {
     echo " \___/| .__/ \___|_| |_|_|   \__,_|_| |_|\___|_|"
     echo "      |_|                                       "
     echo -e "${NC}"
-    echo -e "OpenPanel 更新脚本"
+    echo -e "OpenNextPanel 更新脚本"
     echo -e "==================\n"
 }
 
@@ -61,7 +61,7 @@ show_help() {
     echo ""
     echo "选项:"
     echo "  -h, --help          显示此帮助信息"
-    echo "  -d, --dir DIR       指定安装目录 (默认: /opt/openpanel)"
+    echo "  -d, --dir DIR       指定安装目录 (默认: /opt/opennextpanel)"
     echo "  -b, --branch BRANCH 指定 Git 分支 (默认: main)"
     echo "  -f, --force         强制更新 (忽略本地修改)"
     echo "  -s, --skip-backup   跳过备份"
@@ -90,7 +90,7 @@ check_installation() {
     print_step "检查安装"
 
     if [ ! -d "$INSTALL_DIR" ]; then
-        print_error "OpenPanel 未安装在 $INSTALL_DIR"
+        print_error "OpenNextPanel 未安装在 $INSTALL_DIR"
         exit 1
     fi
 
@@ -406,7 +406,7 @@ start_service() {
 show_result() {
     echo ""
     echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}    OpenPanel 更新完成!${NC}"
+    echo -e "${GREEN}    OpenNextPanel 更新完成!${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
 

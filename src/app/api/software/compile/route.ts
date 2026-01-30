@@ -178,7 +178,7 @@ async function handlePOST(request: NextRequest) {
       compileTasks.set(taskId, task);
 
       // 保存脚本到临时文件
-      const scriptPath = `/tmp/openpanel_compile_${taskId}.sh`;
+      const scriptPath = `/tmp/opennextpanel_compile_${taskId}.sh`;
       fs.writeFileSync(scriptPath, script, { mode: 0o755 });
 
       // 异步执行编译
@@ -242,7 +242,7 @@ async function executeCompile(taskId: string, scriptPath: string) {
   task.status = "running";
   task.currentStep = "开始编译...";
 
-  const logPath = `/tmp/openpanel_compile_${taskId}.log`;
+  const logPath = `/tmp/opennextpanel_compile_${taskId}.log`;
   const logStream = fs.createWriteStream(logPath, { flags: "a" });
 
   try {

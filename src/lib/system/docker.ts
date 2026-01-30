@@ -8,8 +8,8 @@ import Docker from "dockerode";
 // Initialize Docker client
 const docker = new Docker({ socketPath: "/var/run/docker.sock" });
 
-// OpenPanel shared network name
-const OPENPANEL_NETWORK = "openpanel-network";
+// OpenNextPanel shared network name
+const OPENPANEL_NETWORK = "opennextpanel-network";
 
 export interface ContainerInfo {
   id: string;
@@ -306,7 +306,7 @@ export async function configureDockerDNS(): Promise<{ success: boolean; message:
 }
 
 /**
- * Ensure the OpenPanel shared network exists
+ * Ensure the OpenNextPanel shared network exists
  */
 export async function ensureNetwork(): Promise<string> {
   try {
@@ -339,7 +339,7 @@ export async function ensureNetwork(): Promise<string> {
 }
 
 /**
- * Create and run a container (automatically joins openpanel-network)
+ * Create and run a container (automatically joins opennextpanel-network)
  */
 export async function createContainer(
   imageName: string,

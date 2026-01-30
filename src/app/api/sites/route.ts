@@ -91,7 +91,7 @@ async function handlePOST(request: NextRequest) {
       const indexContent = `<!DOCTYPE html>
 <html>
 <head><title>Welcome to ${name}</title></head>
-<body><h1>Welcome to ${name}</h1><p>Site created by OpenPanel</p></body>
+<body><h1>Welcome to ${name}</h1><p>Site created by OpenNextPanel</p></body>
 </html>`;
 
       const fs = require("fs/promises");

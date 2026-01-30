@@ -753,7 +753,7 @@ export function generateCompileScript(options: CompileOptions): string {
   const script = `#!/bin/bash
 #############################################
 # Nginx 自定义编译脚本
-# 由 OpenPanel 自动生成
+# 由 OpenNextPanel 自动生成
 # 版本: ${options.version}
 # 时间: $(date '+%Y-%m-%d %H:%M:%S')
 #############################################
@@ -864,7 +864,7 @@ mkdir -p \${INSTALL_PATH}/conf/sites-enabled
 log_info "创建 systemd 服务..."
 cat > /etc/systemd/system/nginx.service << 'EOF'
 [Unit]
-Description=Nginx HTTP Server (Compiled by OpenPanel)
+Description=Nginx HTTP Server (Compiled by OpenNextPanel)
 Documentation=https://nginx.org/en/docs/
 After=network-online.target remote-fs.target nss-lookup.target
 Wants=network-online.target
@@ -895,7 +895,7 @@ ln -sf \${INSTALL_PATH}/sbin/nginx /usr/sbin/nginx
 # 创建优化配置
 log_info "生成优化配置..."
 cat > \${INSTALL_PATH}/conf/nginx.conf << 'NGINX_CONF'
-# Nginx 优化配置 - OpenPanel 自动生成
+# Nginx 优化配置 - OpenNextPanel 自动生成
 user www-data;
 worker_processes auto;
 worker_rlimit_nofile 65535;
@@ -1059,7 +1059,7 @@ cat > \${INSTALL_PATH}/html/index.html << 'HTML'
 <body>
     <div class="container">
         <h1>🚀 Nginx 运行中</h1>
-        <p>由 OpenPanel 编译安装</p>
+        <p>由 OpenNextPanel 编译安装</p>
         <div class="version">Nginx ${options.version}</div>
     </div>
 </body>

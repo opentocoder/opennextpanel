@@ -179,7 +179,7 @@ export default function LoginPage() {
               <Server className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">OpenPanel</CardTitle>
+          <CardTitle className="text-2xl font-bold">OpenNextPanel</CardTitle>
           <CardDescription>服务器管理面板</CardDescription>
         </CardHeader>
         <CardContent>

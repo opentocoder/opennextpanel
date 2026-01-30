@@ -1,4 +1,4 @@
-# OpenPanel 功能说明
+# OpenNextPanel 功能说明
 
 ## 目录
 
@@ -345,15 +345,15 @@ Web 文件管理器，管理服务器文件。
 ### Q: 忘记面板密码怎么办？
 A: 通过 SSH 登录服务器，运行：
 ```bash
-cd /opt/openpanel
+cd /opt/opennextpanel
 node scripts/reset-password.js
 ```
 
 ### Q: 面板无法访问？
 A: 检查：
 1. 防火墙是否放行 8888 端口
-2. OpenPanel 服务是否运行：`systemctl status openpanel`
-3. 查看日志：`journalctl -u openpanel -f`
+2. OpenNextPanel 服务是否运行：`systemctl status opennextpanel`
+3. 查看日志：`journalctl -u opennextpanel -f`
 
 ### Q: SSL 证书申请失败？
 A: 确保：
@@ -363,4 +363,4 @@ A: 确保：
 
 ---
 
-*更多问题请查看 [FAQ](faq.md) 或提交 [Issue](https://github.com/opentocoder/openpanel/issues)*
+*更多问题请查看 [FAQ](faq.md) 或提交 [Issue](https://github.com/opentocoder/opennextpanel/issues)*

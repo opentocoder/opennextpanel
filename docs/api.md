@@ -1,8 +1,8 @@
-# OpenPanel API 文档
+# OpenNextPanel API 文档
 
 ## 概述
 
-OpenPanel 提供 RESTful API 用于自动化管理。所有 API 需要身份验证。
+OpenNextPanel 提供 RESTful API 用于自动化管理。所有 API 需要身份验证。
 
 ## 认证
 
@@ -626,9 +626,9 @@ Content-Type: application/json
 ### Node.js
 
 ```javascript
-const OpenPanel = require('openpanel-sdk');
+const OpenNextPanel = require('opennextpanel-sdk');
 
-const client = new OpenPanel({
+const client = new OpenNextPanel({
   url: 'http://your-server:8888',
   token: 'your-api-token'
 });
@@ -646,9 +646,9 @@ await client.sites.create({
 ### Python
 
 ```python
-from openpanel import OpenPanel
+from opennextpanel import OpenNextPanel
 
-client = OpenPanel(
+client = OpenNextPanel(
     url='http://your-server:8888',
     token='your-api-token'
 )

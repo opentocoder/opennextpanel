@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# OpenPanel 一键安装脚本
+# OpenNextPanel 一键安装脚本
 # 支持: CentOS 7+, Debian 10+, Ubuntu 18.04+, Arch Linux
 #
 
@@ -15,10 +15,10 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # 配置
-INSTALL_DIR="/opt/openpanel"
-SERVICE_NAME="openpanel"
+INSTALL_DIR="/opt/opennextpanel"
+SERVICE_NAME="opennextpanel"
 DEFAULT_PORT=8888
-REPO_URL="${OPENPANEL_REPO_URL:-https://github.com/opentocoder/openpanel.git}"
+REPO_URL="${OPENPANEL_REPO_URL:-https://github.com/opentocoder/opennextpanel.git}"
 DOWNLOAD_URL="${OPENPANEL_DOWNLOAD_URL:-}"  # 支持从 tar.gz 下载
 MIN_NODE_VERSION=22
 
@@ -53,7 +53,7 @@ show_banner() {
     echo " \___/| .__/ \___|_| |_|_|   \__,_|_| |_|\___|_|"
     echo "      |_|                                       "
     echo -e "${NC}"
-    echo -e "OpenPanel 服务器管理面板 - 一键安装脚本"
+    echo -e "OpenNextPanel 服务器管理面板 - 一键安装脚本"
     echo -e "========================================\n"
 }
 
@@ -64,7 +64,7 @@ show_help() {
     echo "选项:"
     echo "  -h, --help          显示此帮助信息"
     echo "  -p, --port PORT     指定面板端口 (默认: 8888)"
-    echo "  -d, --dir DIR       指定安装目录 (默认: /opt/openpanel)"
+    echo "  -d, --dir DIR       指定安装目录 (默认: /opt/opennextpanel)"
     echo "  -s, --skip-firewall 跳过防火墙配置"
     echo "  -y, --yes           自动确认所有提示"
     echo ""
@@ -225,7 +225,7 @@ install_nodejs() {
 
 # 下载面板
 download_panel() {
-    print_step "下载 OpenPanel"
+    print_step "下载 OpenNextPanel"
 
     if [ -d "$INSTALL_DIR" ]; then
         print_warning "安装目录已存在: $INSTALL_DIR"
@@ -247,17 +247,17 @@ download_panel() {
     # 优先级: 1.环境变量指定的下载URL 2.本地源码 3.Git克隆
     if [ -n "$DOWNLOAD_URL" ]; then
         print_info "从 $DOWNLOAD_URL 下载..."
-        curl -sSL "$DOWNLOAD_URL" -o /tmp/openpanel.tar.gz && \
-        tar -xzf /tmp/openpanel.tar.gz -C "$INSTALL_DIR" && \
-        rm -f /tmp/openpanel.tar.gz
-    elif [ -d "/tmp/openpanel-source" ]; then
+        curl -sSL "$DOWNLOAD_URL" -o /tmp/opennextpanel.tar.gz && \
+        tar -xzf /tmp/opennextpanel.tar.gz -C "$INSTALL_DIR" && \
+        rm -f /tmp/opennextpanel.tar.gz
+    elif [ -d "/tmp/opennextpanel-source" ]; then
         print_info "使用本地源码..."
-        cp -r /tmp/openpanel-source/* "$INSTALL_DIR/"
+        cp -r /tmp/opennextpanel-source/* "$INSTALL_DIR/"
     else
         print_info "从 Git 克隆..."
         git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" 2>/dev/null || {
             print_error "无法下载源码，请设置 OPENPANEL_DOWNLOAD_URL 环境变量"
-            print_info "示例: OPENPANEL_DOWNLOAD_URL=http://your-server/openpanel.tar.gz bash install_panel.sh"
+            print_info "示例: OPENPANEL_DOWNLOAD_URL=http://your-server/opennextpanel.tar.gz bash install_panel.sh"
             exit 1
         }
     fi
@@ -370,11 +370,11 @@ install_database() {
         fi
     fi
 
-    # 生成 OpenPanel 专用 MySQL 用户密码
-    MYSQL_PANEL_USER="openpanel"
+    # 生成 OpenNextPanel 专用 MySQL 用户密码
+    MYSQL_PANEL_USER="opennextpanel"
     MYSQL_PANEL_PASSWORD=$(generate_password 20)
 
-    print_info "创建 OpenPanel 专用 MySQL 用户..."
+    print_info "创建 OpenNextPanel 专用 MySQL 用户..."
 
     # 创建用户的 SQL
     local create_user_sql="
@@ -399,9 +399,9 @@ FLUSH PRIVILEGES;
     elif mysql -u root -p'root' -e "SELECT 1" &>/dev/null 2>&1; then
         echo "$create_user_sql" | mysql -u root -p'root'
         mysql_connected=true
-    # 方式3: 检查是否已存在 openpanel 用户
-    elif mysql -u openpanel -p"${MYSQL_PANEL_PASSWORD}" -e "SELECT 1" &>/dev/null 2>&1; then
-        print_info "OpenPanel MySQL 用户已存在"
+    # 方式3: 检查是否已存在 opennextpanel 用户
+    elif mysql -u opennextpanel -p"${MYSQL_PANEL_PASSWORD}" -e "SELECT 1" &>/dev/null 2>&1; then
+        print_info "OpenNextPanel MySQL 用户已存在"
         mysql_connected=true
     fi
 
@@ -500,7 +500,7 @@ create_config() {
     local jwt_secret=$(generate_password 32)
 
     cat > "$INSTALL_DIR/.env" << EOF
-# OpenPanel 配置文件
+# OpenNextPanel 配置文件
 # 生成时间: $(date '+%Y-%m-%d %H:%M:%S')
 
 # 服务端口
@@ -521,7 +521,7 @@ LOG_LEVEL=info
 # 运行环境
 NODE_ENV=production
 
-# MySQL 配置（OpenPanel 专用用户，非 root）
+# MySQL 配置（OpenNextPanel 专用用户，非 root）
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_ROOT_USER=$MYSQL_PANEL_USER
@@ -562,8 +562,8 @@ create_service() {
 
     cat > /etc/systemd/system/${SERVICE_NAME}.service << EOF
 [Unit]
-Description=OpenPanel Server Management Panel
-Documentation=https://github.com/opentocoder/openpanel
+Description=OpenNextPanel Server Management Panel
+Documentation=https://github.com/opentocoder/opennextpanel
 After=network.target
 
 [Service]
@@ -575,7 +575,7 @@ Restart=on-failure
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=openpanel
+SyslogIdentifier=opennextpanel
 
 # 环境变量
 Environment=NODE_ENV=production
@@ -674,7 +674,7 @@ show_result() {
 
     echo ""
     echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}    OpenPanel 安装完成!${NC}"
+    echo -e "${GREEN}    OpenNextPanel 安装完成!${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
     echo -e "访问地址: ${CYAN}http://${server_ip}:${PANEL_PORT}${NC}"
@@ -692,10 +692,10 @@ show_result() {
     echo -e "${RED}请立即登录并修改默认密码!${NC}"
     echo ""
     echo -e "常用命令:"
-    echo -e "  ${CYAN}systemctl status openpanel${NC}   - 查看状态"
-    echo -e "  ${CYAN}systemctl restart openpanel${NC} - 重启服务"
-    echo -e "  ${CYAN}systemctl stop openpanel${NC}    - 停止服务"
-    echo -e "  ${CYAN}journalctl -u openpanel -f${NC}  - 查看日志"
+    echo -e "  ${CYAN}systemctl status opennextpanel${NC}   - 查看状态"
+    echo -e "  ${CYAN}systemctl restart opennextpanel${NC} - 重启服务"
+    echo -e "  ${CYAN}systemctl stop opennextpanel${NC}    - 停止服务"
+    echo -e "  ${CYAN}journalctl -u opennextpanel -f${NC}  - 查看日志"
     echo ""
     echo -e "安装目录: ${CYAN}${INSTALL_DIR}${NC}"
     echo -e "配置文件: ${CYAN}${INSTALL_DIR}/.env${NC}"

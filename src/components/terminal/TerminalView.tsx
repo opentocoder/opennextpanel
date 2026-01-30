@@ -84,7 +84,7 @@ export function TerminalView({ id, onData, onResize }: TerminalViewProps) {
       });
 
       // Initial welcome message
-      term.writeln("\x1b[32m欢迎使用 OpenPanel 终端\x1b[0m");
+      term.writeln("\x1b[32m欢迎使用 OpenNextPanel 终端\x1b[0m");
       term.writeln("连接中...");
       term.write("\r\n$ ");
 

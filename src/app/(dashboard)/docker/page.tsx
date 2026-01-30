@@ -1205,7 +1205,7 @@ export default function DockerPage() {
                       数据库主机: 容器名称（如 mysql 或 mariadb）
                     </code>
                     <p className="text-green-600 mt-1">
-                      ✓ 通过面板安装的容器自动加入 openpanel-network，可直接用容器名互联
+                      ✓ 通过面板安装的容器自动加入 opennextpanel-network，可直接用容器名互联
                     </p>
                   </div>
                 </div>

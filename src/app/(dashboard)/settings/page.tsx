@@ -32,7 +32,7 @@ interface ApiSettingsData {
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [basicSettings, setBasicSettings] = useState<BasicSettingsData>({
-    panelName: "OpenPanel",
+    panelName: "OpenNextPanel",
     panelPort: 8888,
     securityPath: "",
     username: "admin",

@@ -1,9 +1,9 @@
-# OpenPanel
+# OpenNextPanel
 
 **开源服务器管理面板** - 简洁、安全、高效的 Linux 服务器管理解决方案
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/opentocoder/openpanel)](https://github.com/opentocoder/openpanel)
+[![GitHub Stars](https://img.shields.io/github/stars/opentocoder/opennextpanel)](https://github.com/opentocoder/opennextpanel)
 
 ## 功能特性
 
@@ -68,11 +68,11 @@
 
 ```bash
 # 一键安装
-curl -sSL https://raw.githubusercontent.com/opentocoder/openpanel/master/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/opentocoder/opennextpanel/master/scripts/install.sh | bash
 
 # 或手动安装
-git clone https://github.com/opentocoder/openpanel.git
-cd openpanel
+git clone https://github.com/opentocoder/opennextpanel.git
+cd opennextpanel
 bash scripts/install_panel.sh
 ```
 
@@ -89,7 +89,7 @@ bash scripts/install_panel.sh
 ## 配置文件
 
 ```
-/opt/openpanel/
+/opt/opennextpanel/
 ├── .env              # 环境配置
 ├── data/
 │   └── panel.db      # SQLite 数据库
@@ -145,4 +145,4 @@ npm start
 
 ---
 
-**OpenPanel** - 让服务器管理更简单
+**OpenNextPanel** - 让服务器管理更简单

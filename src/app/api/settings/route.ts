@@ -112,7 +112,7 @@ async function handleGET(request: NextRequest) {
 
     if (type === "basic") {
       const basicSettings: BasicSettings = {
-        panelName: settings.panel_name || "OpenPanel",
+        panelName: settings.panel_name || "OpenNextPanel",
         panelPort: parseInt(settings.panel_port || "8888", 10),
         securityPath: settings.security_path ?? "",
         username: user?.username || "admin",
@@ -134,7 +134,7 @@ async function handleGET(request: NextRequest) {
 
     // Return all settings
     const basicSettings: BasicSettings = {
-      panelName: settings.panel_name || "OpenPanel",
+      panelName: settings.panel_name || "OpenNextPanel",
       panelPort: parseInt(settings.panel_port || "8888", 10),
       securityPath: settings.security_path ?? "",
       username: user?.username || "admin",
@@ -166,7 +166,7 @@ async function handlePOST(request: NextRequest) {
 
     if (action === "save_basic") {
       // 保存所有设置，包括空值
-      if (settings.panelName !== undefined) saveSetting("panel_name", settings.panelName || "OpenPanel");
+      if (settings.panelName !== undefined) saveSetting("panel_name", settings.panelName || "OpenNextPanel");
       if (settings.panelPort !== undefined) saveSetting("panel_port", String(settings.panelPort || 8888));
       // 安全入口允许为空（关闭功能）
       if (settings.securityPath !== undefined) saveSetting("security_path", settings.securityPath);

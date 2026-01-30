@@ -1,4 +1,4 @@
-# OpenPanel 安装指南
+# OpenNextPanel 安装指南
 
 ## 系统要求
 
@@ -31,13 +31,13 @@
 ### 方式一：在线安装脚本
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/opentocoder/openpanel/master/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/opentocoder/opennextpanel/master/scripts/install.sh | bash
 ```
 
 ### 方式二：wget 安装
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/opentocoder/openpanel/master/scripts/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/opentocoder/opennextpanel/master/scripts/install.sh | bash
 ```
 
 ---
@@ -66,8 +66,8 @@ npm -v   # 应显示 10.x.x
 
 ```bash
 cd /opt
-git clone https://github.com/opentocoder/openpanel.git
-cd openpanel
+git clone https://github.com/opentocoder/opennextpanel.git
+cd opennextpanel
 ```
 
 ### 3. 安装依赖
@@ -99,15 +99,15 @@ npm run build
 ### 6. 配置 Systemd 服务
 
 ```bash
-cat > /etc/systemd/system/openpanel.service << 'EOF'
+cat > /etc/systemd/system/opennextpanel.service << 'EOF'
 [Unit]
-Description=OpenPanel Server Management Panel
+Description=OpenNextPanel Server Management Panel
 After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/openpanel
+WorkingDirectory=/opt/opennextpanel
 ExecStart=/usr/bin/npm start
 Restart=always
 RestartSec=10
@@ -120,8 +120,8 @@ EOF
 
 # 启用并启动服务
 systemctl daemon-reload
-systemctl enable openpanel
-systemctl start openpanel
+systemctl enable opennextpanel
+systemctl start opennextpanel
 ```
 
 ### 7. 配置防火墙
@@ -146,7 +146,7 @@ firewall-cmd --reload
 ### 检查服务状态
 
 ```bash
-systemctl status openpanel
+systemctl status opennextpanel
 ```
 
 应显示 `active (running)`。
@@ -169,10 +169,10 @@ ss -tlnp | grep 8888
 
 ```bash
 # 查看安装日志
-cat /var/log/openpanel-install.log | grep -i password
+cat /var/log/opennextpanel-install.log | grep -i password
 
 # 或查看服务日志
-journalctl -u openpanel | grep -i password
+journalctl -u opennextpanel | grep -i password
 ```
 
 默认用户名：`admin`
@@ -203,14 +203,14 @@ journalctl -u openpanel | grep -i password
 ### 自动升级
 
 ```bash
-cd /opt/openpanel
+cd /opt/opennextpanel
 ./scripts/upgrade.sh
 ```
 
 ### 手动升级
 
 ```bash
-cd /opt/openpanel
+cd /opt/opennextpanel
 
 # 备份
 cp -r data data.bak
@@ -226,7 +226,7 @@ npm install
 npm run build
 
 # 重启服务
-systemctl restart openpanel
+systemctl restart opennextpanel
 ```
 
 ---
@@ -235,15 +235,15 @@ systemctl restart openpanel
 
 ```bash
 # 停止服务
-systemctl stop openpanel
-systemctl disable openpanel
+systemctl stop opennextpanel
+systemctl disable opennextpanel
 
 # 删除服务文件
-rm /etc/systemd/system/openpanel.service
+rm /etc/systemd/system/opennextpanel.service
 systemctl daemon-reload
 
 # 删除面板目录
-rm -rf /opt/openpanel
+rm -rf /opt/opennextpanel
 
 # 可选：删除面板安装的软件
 apt remove nginx php* mariadb* redis*
@@ -278,18 +278,18 @@ kill -9 <PID>
 
 ```bash
 # 修复权限
-chown -R root:root /opt/openpanel
-chmod -R 755 /opt/openpanel
+chown -R root:root /opt/opennextpanel
+chmod -R 755 /opt/opennextpanel
 ```
 
 ### 服务启动失败
 
 ```bash
 # 查看详细日志
-journalctl -u openpanel -f
+journalctl -u opennextpanel -f
 
 # 手动启动测试
-cd /opt/openpanel
+cd /opt/opennextpanel
 npm start
 ```
 
@@ -297,8 +297,8 @@ npm start
 
 ## 获取帮助
 
-- 查看文档：[docs/](https://github.com/opentocoder/openpanel/tree/master/docs)
-- 提交 Issue：[GitHub Issues](https://github.com/opentocoder/openpanel/issues)
+- 查看文档：[docs/](https://github.com/opentocoder/opennextpanel/tree/master/docs)
+- 提交 Issue：[GitHub Issues](https://github.com/opentocoder/opennextpanel/issues)
 - 常见问题：[FAQ](faq.md)
 
 ---
