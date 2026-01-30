@@ -19,6 +19,7 @@ interface Site {
   phpVersion: string;
   sslStatus: "deployed" | "not_deployed" | "expired";
   sslExpireDays?: number;
+  createdAt?: string;
 }
 
 export default function SitesPage() {

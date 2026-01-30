@@ -121,9 +121,49 @@ npm start
 - [API 文档](docs/api.md) - REST API 接口说明
 - [常见问题](docs/faq.md) - FAQ
 
-## 截图
+## 截图预览
+
+### 仪表盘
+系统概览，实时显示 CPU、内存、磁盘使用情况和已安装软件状态。
 
 ![Dashboard](docs/images/dashboard.png)
+
+### 网站管理
+支持 PHP、静态网站和反向代理，可视化管理所有站点。
+
+![Sites](docs/images/sites.png)
+
+### 站点设置
+丰富的站点配置选项：域名管理、SSL、伪静态、反向代理、防盗链等。
+
+![Site Settings](docs/images/site-settings.png)
+
+### 数据库管理
+MySQL/MariaDB 数据库可视化管理，支持用户权限配置。
+
+![Database](docs/images/database.png)
+
+### Docker 管理
+容器生命周期管理和丰富的应用商店，一键部署常用服务。
+
+![Docker Containers](docs/images/docker-containers.png)
+
+![Docker App Store](docs/images/docker-appstore.png)
+
+### 文件管理
+功能完善的 Web 文件管理器，支持在线编辑、上传下载、压缩解压。
+
+![File Manager](docs/images/file-manager.png)
+
+### 软件中心
+一键安装/卸载 Nginx、PHP、MySQL、Redis 等常用软件。
+
+![Software](docs/images/software.png)
+
+### 面板设置
+面板基本配置、安全入口、API 管理等。
+
+![Settings](docs/images/settings.png)
 
 ## 贡献
 

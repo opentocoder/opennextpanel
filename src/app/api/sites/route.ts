@@ -44,6 +44,7 @@ async function handleGET() {
       phpVersion: site.php_version || "static",
       sslStatus: site.ssl_enabled === 1 ? "deployed" : "not_deployed",
       sslExpireDays: site.ssl_expire_days,
+      createdAt: site.created_at || "",
     }));
 
     return NextResponse.json({ sites: formattedSites });

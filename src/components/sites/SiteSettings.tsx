@@ -304,7 +304,7 @@ export function SiteSettings({ open, onOpenChange, site }: SiteSettingsProps) {
           <DialogTitle>
             站点修改[{site.name}]
             <span className="text-sm font-normal text-gray-500 ml-2">
-              -- 添加时间[{site.createdAt || "2024-01-01 00:00:00"}]
+              -- 添加时间[{site.createdAt ? site.createdAt.replace("T", " ").substring(0, 19) : "未知"}]
             </span>
           </DialogTitle>
         </DialogHeader>
