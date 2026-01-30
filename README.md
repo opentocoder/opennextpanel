@@ -64,6 +64,8 @@
 - **存储**: 最低 20GB
 - **架构**: x86_64
 
+> **注意**：目前暂不支持 CentOS、AlmaLinux、Rocky Linux 等 RHEL 系发行版。详见 [安装指南](docs/installation.md)。
+
 ## 快速安装
 
 ```bash

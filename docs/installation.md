@@ -3,10 +3,21 @@
 ## 系统要求
 
 ### 支持的操作系统
+
+**已支持（稳定）：**
 - Ubuntu 22.04 LTS (推荐)
 - Ubuntu 24.04 LTS
 - Debian 11
 - Debian 12
+
+**暂不支持：**
+- CentOS 7/8/Stream
+- AlmaLinux 8/9
+- Rocky Linux 8/9
+- Fedora
+- openSUSE
+
+> **注意**：目前面板仅支持 Debian/Ubuntu 系统（apt 包管理器）。CentOS 及其替代品（AlmaLinux、Rocky Linux）使用 dnf/yum 包管理器，需要不同的安装脚本和配置路径。未来版本可能会添加支持。
 
 ### 硬件要求
 
@@ -478,6 +489,38 @@ journalctl -u opennextpanel -f
 # 手动启动测试
 cd /opt/opennextpanel
 npm start
+```
+
+---
+
+## Docker 部署（实验性）
+
+> **警告**：在 Docker 中运行服务器管理面板是非标准用法。此方式主要用于开发测试，不推荐生产环境使用。
+
+面板可以通过 Docker 运行，但有以下限制：
+- 无法管理宿主机的 Nginx/PHP/MySQL（只能管理面板内的容器）
+- 需要特殊配置才能管理宿主机的 Docker
+
+### 使用 Docker Compose
+
+```bash
+cd /opt/opennextpanel
+docker-compose -f docker/docker-compose.yml up -d
+```
+
+### 使用 Dockerfile
+
+```bash
+cd /opt/opennextpanel
+
+# 使用 Ubuntu 基础镜像
+docker build -f docker/Dockerfile.ubuntu -t opennextpanel .
+
+# 或使用 Node.js 轻量镜像
+docker build -f docker/Dockerfile.node -t opennextpanel .
+
+# 运行
+docker run -d -p 8888:3000 --name opennextpanel opennextpanel
 ```
 
 ---

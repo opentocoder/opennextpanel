@@ -3,11 +3,20 @@
 ## 安装相关
 
 ### Q: 支持哪些操作系统？
-A: 目前支持：
-- Ubuntu 22.04 LTS
+A: **目前支持（稳定）：**
+- Ubuntu 22.04 LTS (推荐)
 - Ubuntu 24.04 LTS
 - Debian 11
 - Debian 12
+
+**暂不支持：**
+- CentOS 7/8/Stream
+- AlmaLinux 8/9
+- Rocky Linux 8/9
+- Fedora
+- openSUSE
+
+面板使用 apt 包管理器，暂不支持 dnf/yum 系统。未来可能添加 RHEL 系支持
 
 ### Q: 安装需要多少资源？
 A: 最低配置：
