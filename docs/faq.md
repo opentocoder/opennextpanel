@@ -50,19 +50,28 @@ sudo systemctl restart opennextpanel
 ## 登录相关
 
 ### Q: 忘记管理员密码怎么办？
-A: 通过 SSH 登录服务器，执行：
+A: 通过 SSH 登录服务器，使用密码重置脚本：
+
+**方法一：自动生成新密码（推荐）**
 ```bash
 cd /opt/opennextpanel
-node -e "
-const bcrypt = require('bcryptjs');
-const Database = require('better-sqlite3');
-const db = new Database('data/panel.db');
-const newPassword = 'admin123';
-const hash = bcrypt.hashSync(newPassword, 10);
-db.prepare('UPDATE users SET password = ? WHERE username = ?').run(hash, 'admin');
-console.log('密码已重置为: admin123');
-"
+node scripts/reset-password.js
 ```
+脚本会自动生成随机密码并显示。
+
+**方法二：指定新密码**
+```bash
+cd /opt/opennextpanel
+node scripts/reset-password.js YourNewPassword123
+```
+
+**方法三：使用初始化脚本**
+```bash
+cd /opt/opennextpanel
+node scripts/init-db.js --password YourNewPassword123
+```
+
+重置后密码会自动保存到 `.env` 文件中
 
 ### Q: 面板无法访问？
 A: 排查步骤：
