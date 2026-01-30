@@ -4,10 +4,10 @@
 
 ### Q: 支持哪些操作系统？
 A: **目前支持（稳定）：**
-- Ubuntu 22.04 LTS (推荐)
-- Ubuntu 24.04 LTS
-- Debian 11
+- Ubuntu 24.04 LTS (推荐，已测试)
+- Ubuntu 22.04 LTS
 - Debian 12
+- Debian 11
 
 **暂不支持：**
 - CentOS 7/8/Stream
