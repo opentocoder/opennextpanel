@@ -24,7 +24,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && rm -rf /var/lib/apt/lists/*
 
 # 创建工作目录
-WORKDIR /opt/openpanel
+WORKDIR /opt/opennextpanel
 
 # 复制项目文件
 COPY package*.json ./

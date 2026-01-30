@@ -2,7 +2,7 @@
 FROM node:20-slim
 
 # 设置工作目录
-WORKDIR /opt/openpanel
+WORKDIR /opt/opennextpanel
 
 # 复制 package 文件
 COPY package*.json ./

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * OpenPanel 数据库初始化脚本
+ * OpenNextPanel 数据库初始化脚本
  * 用法: node scripts/init-db.js [--password <password>]
  *
  * 此脚本用于初始化 SQLite 数据库表结构和默认管理员账户
@@ -241,7 +241,7 @@ if (existingAdmin) {
 
 // 插入默认设置
 const settingsStmt = db.prepare("INSERT OR IGNORE INTO settings (key, value, description) VALUES (?, ?, ?)");
-settingsStmt.run("panel_name", "OpenPanel", "面板名称");
+settingsStmt.run("panel_name", "OpenNextPanel", "面板名称");
 settingsStmt.run("panel_port", "8888", "面板端口");
 // 安全入口默认为空（禁用），用户可在设置中启用
 settingsStmt.run("security_path", "", "安全入口");

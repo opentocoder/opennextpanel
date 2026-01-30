@@ -1,43 +1,43 @@
 version: '3.8'
 
 services:
-  # OpenPanel 主服务
-  openpanel:
+  # OpenNextPanel 主服务
+  opennextpanel:
     build:
       context: ..
       dockerfile: docker/Dockerfile.ubuntu
-    container_name: openpanel
+    container_name: opennextpanel
     ports:
       - "8888:3000"
     environment:
       - NODE_ENV=production
       - JWT_SECRET=your-secret-key-change-in-production
     volumes:
-      - openpanel-data:/opt/openpanel/data
+      - opennextpanel-data:/opt/opennextpanel/data
     restart: unless-stopped
     networks:
-      - openpanel-net
+      - opennextpanel-net
 
   # 可选: Nginx 反向代理
   nginx:
     image: nginx:alpine
-    container_name: openpanel-nginx
+    container_name: opennextpanel-nginx
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - openpanel
+      - opennextpanel
     restart: unless-stopped
     networks:
-      - openpanel-net
+      - opennextpanel-net
     profiles:
       - with-nginx
 
 volumes:
-  openpanel-data:
+  opennextpanel-data:
 
 networks:
-  openpanel-net:
+  opennextpanel-net:
     driver: bridge
