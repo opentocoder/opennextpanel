@@ -19,7 +19,7 @@ INSTALL_DIR="/opt/opennextpanel"
 SERVICE_NAME="opennextpanel"
 DEFAULT_PORT=8888
 REPO_URL="${OPENPANEL_REPO_URL:-https://github.com/opentocoder/opennextpanel.git}"
-DOWNLOAD_URL="${OPENPANEL_DOWNLOAD_URL:-}"  # 支持从 tar.gz 下载
+DOWNLOAD_URL="${OPENNEXTPANEL_DOWNLOAD_URL:-}"  # 支持从 tar.gz 下载
 MIN_NODE_VERSION=22
 
 # 打印带颜色的消息
@@ -256,8 +256,8 @@ download_panel() {
     else
         print_info "从 Git 克隆..."
         git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" 2>/dev/null || {
-            print_error "无法下载源码，请设置 OPENPANEL_DOWNLOAD_URL 环境变量"
-            print_info "示例: OPENPANEL_DOWNLOAD_URL=http://your-server/opennextpanel.tar.gz bash install_panel.sh"
+            print_error "无法下载源码，请设置 OPENNEXTPANEL_DOWNLOAD_URL 环境变量"
+            print_info "示例: OPENNEXTPANEL_DOWNLOAD_URL=http://your-server/opennextpanel.tar.gz bash install_panel.sh"
             exit 1
         }
     fi

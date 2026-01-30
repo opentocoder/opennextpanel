@@ -9,7 +9,7 @@ import Docker from "dockerode";
 const docker = new Docker({ socketPath: "/var/run/docker.sock" });
 
 // OpenNextPanel shared network name
-const OPENPANEL_NETWORK = "opennextpanel-network";
+const OPENNEXTPANEL_NETWORK = "opennextpanel-network";
 
 export interface ContainerInfo {
   id: string;
@@ -312,17 +312,17 @@ export async function ensureNetwork(): Promise<string> {
   try {
     // Check if network already exists
     const networks = await docker.listNetworks({
-      filters: { name: [OPENPANEL_NETWORK] }
+      filters: { name: [OPENNEXTPANEL_NETWORK] }
     });
 
-    const existingNetwork = networks.find(n => n.Name === OPENPANEL_NETWORK);
+    const existingNetwork = networks.find(n => n.Name === OPENNEXTPANEL_NETWORK);
     if (existingNetwork) {
       return existingNetwork.Id!;
     }
 
     // Create the network with DNS options
     const network = await docker.createNetwork({
-      Name: OPENPANEL_NETWORK,
+      Name: OPENNEXTPANEL_NETWORK,
       Driver: "bridge",
       CheckDuplicate: true,
       Options: {
@@ -330,7 +330,7 @@ export async function ensureNetwork(): Promise<string> {
       },
     });
 
-    console.log(`Created Docker network: ${OPENPANEL_NETWORK}`);
+    console.log(`Created Docker network: ${OPENNEXTPANEL_NETWORK}`);
     return network.id;
   } catch (error) {
     console.error("Failed to ensure network:", error);
@@ -386,7 +386,7 @@ export async function createContainer(
         PortBindings: portBindings,
         Binds: binds.length > 0 ? binds : undefined,
         RestartPolicy: { Name: "unless-stopped" },
-        NetworkMode: OPENPANEL_NETWORK,  // Auto-join shared network
+        NetworkMode: OPENNEXTPANEL_NETWORK,  // Auto-join shared network
       },
     });
 
@@ -425,5 +425,5 @@ export default {
   isDockerAvailable,
   ensureNetwork,
   configureDockerDNS,
-  OPENPANEL_NETWORK,
+  OPENNEXTPANEL_NETWORK,
 };
