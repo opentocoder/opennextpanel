@@ -172,6 +172,41 @@ A: 检查 Docker DNS 配置：
 systemctl restart docker
 ```
 
+### Q: Docker WordPress 如何连接服务器的 MySQL？
+A: Docker 容器需要通过 Docker 网桥 IP 连接宿主机的 MySQL：
+
+1. **获取 Docker 网桥 IP**（通常是 `172.17.0.1`）：
+```bash
+ip addr show docker0 | grep -oP 'inet \K[\d.]+'
+```
+
+2. **在 WordPress 配置中使用**：
+   - 数据库主机：`172.17.0.1`（不是 `localhost`）
+   - 数据库端口：`3306`
+   - 用户名/密码：在面板「数据库管理」中创建
+
+3. **确保 MySQL 允许 Docker 网络访问**（面板安装时已自动配置）
+
+详细说明请参考 [安装指南 - Docker 应用连接数据库](installation.md#docker-应用连接数据库)
+
+### Q: 如何查看自动生成的 MySQL root 密码？
+A: 安装 MariaDB/MySQL 时生成的密码保存在 `.env` 文件：
+```bash
+cat /opt/opennextpanel/.env | grep MYSQL_ROOT_PASSWORD
+```
+
+### Q: 如何查看面板管理员密码？
+A: 首次安装时生成的密码也保存在 `.env` 文件：
+```bash
+cat /opt/opennextpanel/.env | grep ADMIN_PASSWORD
+```
+
+如果忘记密码，可以重置：
+```bash
+cd /opt/opennextpanel
+node scripts/init-db.js --password NewPassword123
+```
+
 ### Q: 软件卸载不干净？
 A: 使用 `apt autoremove` 清理依赖：
 ```bash

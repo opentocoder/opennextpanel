@@ -163,17 +163,74 @@ ss -tlnp | grep 8888
 
 ---
 
-## 初始账户
+## 初始账户与密码配置
 
-安装完成后，查看安装日志获取初始密码：
+### 面板管理员密码
+
+面板管理员密码有两种配置方式：
+
+**方式一：自动生成（推荐）**
+
+如果不在 `.env` 中设置 `ADMIN_PASSWORD`，系统会自动生成随机密码：
 
 ```bash
-# 查看安装日志
-cat /var/log/opennextpanel-install.log | grep -i password
+# 运行初始化脚本时会显示生成的密码
+node scripts/init-db.js
 
-# 或查看服务日志
-journalctl -u opennextpanel | grep -i password
+# 输出示例：
+# ========================================
+#   数据库初始化完成!
+# ========================================
+#   管理员账户: admin
+#   管理员密码: xK9mP2nQ5rT8
+# ========================================
+
+# 密码会自动写入 .env 文件
+cat .env | grep ADMIN_PASSWORD
+# ADMIN_PASSWORD=xK9mP2nQ5rT8
 ```
+
+**方式二：手动指定**
+
+在 `.env` 中提前设置密码：
+
+```bash
+# 编辑 .env
+echo "ADMIN_PASSWORD=YourSecurePassword123" >> .env
+
+# 运行初始化（使用指定的密码）
+node scripts/init-db.js
+```
+
+或通过命令行参数指定：
+
+```bash
+node scripts/init-db.js --password YourSecurePassword123
+```
+
+### MySQL/MariaDB 密码
+
+安装 MariaDB 或 MySQL 时，系统会：
+
+1. **自动生成 root 密码**并保存到 `/opt/opennextpanel/.env`
+2. 创建面板专用用户（如需要）
+3. 配置远程访问权限
+
+```bash
+# 查看生成的 MySQL 密码
+cat /opt/opennextpanel/.env | grep MYSQL_ROOT_PASSWORD
+
+# 也可以在安装前手动指定密码
+echo "MYSQL_ROOT_PASSWORD=YourMySQLPassword" >> .env
+```
+
+### 密码存储位置
+
+| 密码类型 | 存储位置 | 环境变量 |
+|----------|----------|----------|
+| 面板管理员 | `.env` | `ADMIN_PASSWORD` |
+| MySQL root | `.env` | `MYSQL_ROOT_PASSWORD` |
+| 网站数据库 | 面板数据库 + `.credentials/` | - |
 
 默认用户名：`admin`
 
@@ -195,6 +252,136 @@ journalctl -u opennextpanel | grep -i password
 - Nginx (必需)
 - PHP 8.x (按需)
 - MariaDB (按需)
+
+---
+
+## Docker 应用连接数据库
+
+### Docker WordPress 连接服务器 MySQL/MariaDB
+
+当通过 Docker 应用商店安装 WordPress 时，需要连接到服务器上安装的 MySQL/MariaDB 数据库。
+
+#### 步骤 1：确保 MySQL 已安装并允许 Docker 网络访问
+
+在软件中心安装 MariaDB 后，系统会自动配置允许 Docker 容器访问。
+
+MySQL 用户权限配置（自动完成）：
+```sql
+-- 允许来自 Docker 网络的连接
+CREATE USER 'root'@'172.17.%' IDENTIFIED BY 'your_password';
+CREATE USER 'root'@'172.18.%' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'172.17.%' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'172.18.%' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+```
+
+#### 步骤 2：获取服务器内网 IP
+
+Docker 容器需要通过服务器的 Docker 网桥 IP 连接：
+
+```bash
+# 获取 Docker 网桥 IP（通常是 172.17.0.1）
+ip addr show docker0 | grep -oP 'inet \K[\d.]+'
+
+# 或者使用特殊域名（Docker 18.03+）
+# host.docker.internal  # 仅 Docker Desktop 支持
+# 172.17.0.1           # Linux 上的 Docker 网桥地址
+```
+
+#### 步骤 3：WordPress 数据库配置
+
+在 WordPress 安装向导或 Docker 环境变量中使用：
+
+| 配置项 | 值 |
+|--------|-----|
+| 数据库主机 | `172.17.0.1` 或 Docker 网桥 IP |
+| 数据库名 | 在面板「数据库管理」中创建 |
+| 数据库用户 | `root` 或创建的专用用户 |
+| 数据库密码 | `.env` 中的 `MYSQL_ROOT_PASSWORD` |
+| 表前缀 | `wp_`（默认） |
+
+#### 步骤 4：通过面板创建 WordPress 数据库
+
+1. 进入「数据库管理」
+2. 点击「添加数据库」
+3. 填写：
+   - 数据库名：`wordpress`（或自定义）
+   - 用户名：`wp_user`（或自定义）
+   - 密码：自动生成或手动设置
+4. 点击创建
+
+#### Docker Compose 示例
+
+```yaml
+version: '3'
+services:
+  wordpress:
+    image: wordpress:latest
+    ports:
+      - "8081:80"
+    environment:
+      WORDPRESS_DB_HOST: 172.17.0.1:3306  # Docker 网桥 IP
+      WORDPRESS_DB_USER: wp_user
+      WORDPRESS_DB_PASSWORD: your_db_password
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wordpress_data:/var/www/html
+    # 使用面板创建的共享网络
+    networks:
+      - opennextpanel-network
+
+networks:
+  opennextpanel-network:
+    external: true
+
+volumes:
+  wordpress_data:
+```
+
+#### 常见问题
+
+**Q: WordPress 提示无法连接数据库？**
+
+A: 检查以下几点：
+1. MySQL 是否正在运行：`systemctl status mariadb`
+2. 防火墙是否允许 3306 端口：`ufw status`
+3. MySQL 用户权限是否正确
+4. Docker 网桥 IP 是否正确
+
+```bash
+# 在容器内测试连接
+docker exec -it wordpress-container bash
+apt update && apt install -y mysql-client
+mysql -h 172.17.0.1 -u root -p
+```
+
+**Q: 如何找到正确的 Docker 网桥 IP？**
+
+```bash
+# 方法 1: 查看 docker0 接口
+ip addr show docker0
+
+# 方法 2: 查看 Docker 网络
+docker network inspect bridge | grep Gateway
+
+# 方法 3: 使用 opennextpanel-network
+docker network inspect opennextpanel-network | grep Gateway
+```
+
+**Q: 如何让 MySQL 监听所有接口？**
+
+如果 MySQL 只监听 localhost，需要修改配置：
+
+```bash
+# 编辑 MySQL 配置
+sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
+
+# 将 bind-address 改为
+bind-address = 0.0.0.0
+
+# 重启 MySQL
+sudo systemctl restart mariadb
+```
 
 ---
 

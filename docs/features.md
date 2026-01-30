@@ -263,10 +263,34 @@ Web 文件管理器，管理服务器文件。
 ### 一键部署
 预置常用应用模板：
 - WordPress
-- MySQL
-- Redis
-- Nginx
+- MySQL / MariaDB
+- PostgreSQL
+- Redis / Memcached
+- Nginx / Apache / Caddy
+- MongoDB
+- Elasticsearch
+- RabbitMQ
 - 等等...
+
+### 共享网络
+
+所有通过面板部署的 Docker 容器自动加入 `opennextpanel-network` 网络，实现：
+- 容器间通过容器名互联
+- 容器访问宿主机 MySQL/MariaDB
+- 统一的网络管理
+
+### Docker 应用连接宿主机数据库
+
+Docker 容器（如 WordPress）连接服务器上安装的 MySQL：
+
+| 配置项 | 值 |
+|--------|-----|
+| 数据库主机 | `172.17.0.1`（Docker 网桥 IP） |
+| 数据库端口 | `3306` |
+| 数据库用户 | 在「数据库管理」中创建 |
+| 数据库密码 | 创建时自动生成或手动设置 |
+
+> 详细配置说明请参考 [安装指南 - Docker 应用连接数据库](installation.md#docker-应用连接数据库)
 
 ---
 
